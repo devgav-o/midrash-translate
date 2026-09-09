@@ -6,6 +6,10 @@ a second behind, edits and deletions included.
 
 Runs on one Windows laptop, offline, at no cost.
 
+**Setting up the classroom machine?** Open [`WINDOWS-SETUP.html`](WINDOWS-SETUP.html)
+in a browser -- step-by-step install, the routine for each class, and what to do
+when something goes wrong. The rest of this file is the technical detail behind it.
+
 ## How it works
 
 ```

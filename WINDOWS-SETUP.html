@@ -1,0 +1,486 @@
+<title>Windows Setup &amp; Class Routine</title>
+<style>
+  :root {
+    --bg: #fbfaf7;
+    --panel: #ffffff;
+    --ink: #1c1a17;
+    --ink-soft: #5c574f;
+    --line: #e3ded4;
+    --accent: #8a5a2b;
+    --accent-soft: #f5ece1;
+    --code-bg: #f3f0ea;
+    --warn-bg: #fdf4e3;
+    --warn-line: #e0b872;
+    --good-bg: #eef5ec;
+    --good-line: #9dbd93;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #161513;
+      --panel: #1e1c19;
+      --ink: #ece7de;
+      --ink-soft: #a29a8c;
+      --line: #322e29;
+      --accent: #d9a066;
+      --accent-soft: #2a231b;
+      --code-bg: #12110f;
+      --warn-bg: #2a2214;
+      --warn-line: #6b5325;
+      --good-bg: #1a241a;
+      --good-line: #3f5a3a;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #161513;
+    --panel: #1e1c19;
+    --ink: #ece7de;
+    --ink-soft: #a29a8c;
+    --line: #322e29;
+    --accent: #d9a066;
+    --accent-soft: #2a231b;
+    --code-bg: #12110f;
+    --warn-bg: #2a2214;
+    --warn-line: #6b5325;
+    --good-bg: #1a241a;
+    --good-line: #3f5a3a;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font: 16px/1.6 -apple-system, "Segoe UI", Roboto, system-ui, sans-serif;
+    margin: 0;
+    padding: 0 20px 96px;
+    -webkit-text-size-adjust: 100%;
+  }
+  .wrap { max-width: 780px; margin: 0 auto; }
+
+  header {
+    padding: 56px 0 28px;
+    border-bottom: 2px solid var(--ink);
+    margin-bottom: 8px;
+  }
+  h1 {
+    font-size: clamp(28px, 6vw, 40px);
+    line-height: 1.15;
+    margin: 0 0 10px;
+    letter-spacing: -0.02em;
+  }
+  header p { margin: 0; color: var(--ink-soft); font-size: 17px; }
+
+  nav {
+    margin: 24px 0 40px;
+    padding: 16px 20px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+  }
+  nav b { display: block; font-size: 12px; text-transform: uppercase; letter-spacing: .1em; color: var(--ink-soft); margin-bottom: 8px; }
+  nav a { display: inline-block; margin: 0 18px 4px 0; color: var(--accent); text-decoration: none; font-weight: 600; }
+  nav a:hover { text-decoration: underline; }
+
+  h2 {
+    font-size: 25px;
+    margin: 52px 0 6px;
+    padding-top: 20px;
+    border-top: 1px solid var(--line);
+    letter-spacing: -0.01em;
+  }
+  h2 .sub { display: block; font-size: 14px; font-weight: 400; color: var(--ink-soft); margin-top: 4px; letter-spacing: 0; }
+  h3 { font-size: 17px; margin: 32px 0 8px; }
+
+  ol.steps { list-style: none; counter-reset: s; padding: 0; margin: 28px 0 0; }
+  ol.steps > li {
+    counter-increment: s;
+    position: relative;
+    padding: 0 0 26px 52px;
+    margin: 0;
+    border-left: 2px solid var(--line);
+    margin-left: 15px;
+  }
+  ol.steps > li:last-child { border-left-color: transparent; padding-bottom: 4px; }
+  ol.steps > li::before {
+    content: counter(s);
+    position: absolute;
+    left: -16px;
+    top: -2px;
+    width: 30px; height: 30px;
+    background: var(--accent);
+    color: #fff;
+    border-radius: 50%;
+    display: grid; place-items: center;
+    font-size: 14px; font-weight: 700;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) ol.steps > li::before { color: #1a1512; }
+  }
+  :root[data-theme="dark"] ol.steps > li::before { color: #1a1512; }
+  ol.steps > li > .t { font-weight: 700; font-size: 17px; display: block; margin: 2px 0 6px; }
+  ol.steps p { margin: 8px 0; }
+
+  pre {
+    background: var(--code-bg);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 13px 15px;
+    overflow-x: auto;
+    margin: 12px 0;
+    font: 13.5px/1.55 ui-monospace, "Cascadia Mono", Consolas, monospace;
+    position: relative;
+  }
+  code { font: 0.92em ui-monospace, "Cascadia Mono", Consolas, monospace; background: var(--code-bg); padding: 1.5px 5px; border-radius: 4px; }
+  pre code { background: none; padding: 0; font-size: 1em; }
+
+  .copy {
+    position: absolute; top: 7px; right: 7px;
+    background: var(--panel); color: var(--ink-soft);
+    border: 1px solid var(--line); border-radius: 5px;
+    font: 600 11px/1 -apple-system, "Segoe UI", sans-serif;
+    padding: 5px 8px; cursor: pointer;
+    opacity: 0; transition: opacity .12s;
+  }
+  pre:hover .copy, .copy:focus { opacity: 1; }
+  .copy:hover { color: var(--ink); border-color: var(--accent); }
+
+  .note, .warn, .good {
+    border-left: 3px solid var(--accent);
+    background: var(--accent-soft);
+    padding: 12px 16px;
+    border-radius: 0 8px 8px 0;
+    margin: 14px 0;
+    font-size: 15px;
+  }
+  .warn { border-left-color: var(--warn-line); background: var(--warn-bg); }
+  .good { border-left-color: var(--good-line); background: var(--good-bg); }
+  .note b, .warn b, .good b { display: block; margin-bottom: 3px; }
+  .note p:last-child, .warn p:last-child, .good p:last-child { margin-bottom: 0; }
+  .note p:first-child, .warn p:first-child, .good p:first-child { margin-top: 0; }
+
+  table { border-collapse: collapse; width: 100%; margin: 16px 0; font-size: 15px; }
+  .scroll { overflow-x: auto; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-soft); border-bottom-width: 2px; }
+  td:first-child { white-space: nowrap; }
+  td code { white-space: nowrap; }
+
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 4px 22px 18px;
+    margin: 20px 0;
+  }
+  .card h3 { margin-top: 20px; }
+
+  kbd {
+    background: var(--panel); border: 1px solid var(--line);
+    border-bottom-width: 2px; border-radius: 5px;
+    padding: 2px 7px; font: 600 13px ui-monospace, Consolas, monospace;
+  }
+  .urls li { margin: 4px 0; }
+  footer { margin-top: 60px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--ink-soft); font-size: 14px; }
+
+  @media print {
+    body { padding: 0; background: #fff; }
+    nav, .copy { display: none; }
+    h2 { page-break-after: avoid; }
+    pre, .warn, .note, .good, table { page-break-inside: avoid; }
+  }
+</style>
+
+<div class="wrap">
+
+<header>
+  <h1>Live translation — Windows setup &amp; class routine</h1>
+  <p>Everything needed to get this running on the classroom laptop, and what to do at the start and end of each class.</p>
+</header>
+
+<nav>
+  <b>On this page</b>
+  <a href="#once">One-time setup</a>
+  <a href="#class">Every class</a>
+  <a href="#restart">Restarting</a>
+  <a href="#trouble">Troubleshooting</a>
+  <a href="#keys">Projector keys</a>
+</nav>
+
+<h2 id="once">Part 1 — One-time setup
+  <span class="sub">Do this once on the classroom laptop. Allow about 45 minutes, and you need internet for this part only.</span>
+</h2>
+
+<ol class="steps">
+
+<li>
+  <span class="t">Install Python 3.12</span>
+  <p>Go to <a href="https://www.python.org/downloads/release/python-3129/">python.org</a> and download <b>Windows installer (64-bit)</b> for <b>Python 3.12</b>.</p>
+  <div class="warn">
+    <b>Two things that will break setup if you get them wrong</b>
+    <p>1. In the installer, tick <b>“Add python.exe to PATH”</b> at the bottom of the first screen before clicking Install.</p>
+    <p>2. Use <b>3.12</b>, not 3.13 or 3.14, and install from python.org — <b>not</b> the Microsoft Store version. The translation library has no Windows build for the newer versions yet.</p>
+  </div>
+</li>
+
+<li>
+  <span class="t">Install Git</span>
+  <p>Download from <a href="https://git-scm.com/download/win">git-scm.com</a> and click through the installer accepting every default.</p>
+</li>
+
+<li>
+  <span class="t">Download the code</span>
+  <p>Open the Start menu, type <b>PowerShell</b>, press Enter. Then paste this in and press Enter:</p>
+  <pre><code>cd C:\
+git clone https://github.com/devgav-o/midrash-translate.git
+cd midrash-translate</code></pre>
+  <p>You now have the project at <code>C:\midrash-translate</code>.</p>
+  <div class="note">
+    <b>Why <code>C:\</code> and not the Desktop or Documents</b>
+    <p>If those folders sync to OneDrive, OneDrive will keep grabbing the files while the program is reading them several times a second. Keep it on a plain local path.</p>
+  </div>
+</li>
+
+<li>
+  <span class="t">Run the installer script</span>
+  <p>In the same PowerShell window:</p>
+  <pre><code>powershell -ExecutionPolicy Bypass -File scripts\setup_windows.ps1</code></pre>
+  <p>This takes <b>20–40 minutes</b> and downloads about 4 GB. It sets up Python's libraries and then downloads the three translation models so they work with no internet later. Leave it alone until it prints <b>“Setup complete.”</b></p>
+</li>
+
+<li>
+  <span class="t">Check it is fast enough</span>
+  <pre><code>.\.venv\Scripts\python.exe scripts\benchmark.py
+.\.venv\Scripts\python.exe scripts\check_markers.py</code></pre>
+  <p>The first prints translation speed per language — anything under about 500 ms is comfortable. The second confirms the glossary is being applied.</p>
+</li>
+
+<li>
+  <span class="t">Test it without Word</span>
+  <p>This proves the screens and the network work, before adding Word to the picture.</p>
+  <pre><code>.\.venv\Scripts\python.exe run.py --backend echo --file demo_transcript.txt</code></pre>
+  <div class="warn">
+    <b>A Windows Firewall box will pop up</b>
+    <p>Tick <b>Private networks</b> and click <b>Allow access</b>. Without this the projector machines cannot reach the page. It only asks once.</p>
+  </div>
+  <p>The window prints a few web addresses. Open them in a browser — you should see the demo lines. Then open <code>demo_transcript.txt</code> in Notepad, type a line, <b>save it</b>, and watch it appear on the pages.</p>
+  <p>Press <kbd>Ctrl</kbd>+<kbd>C</kbd> in the PowerShell window to stop it.</p>
+</li>
+
+<li>
+  <span class="t">Test it with real Word</span>
+  <p>Open Word, type two or three lines, and <b>leave Word open</b>. Then in PowerShell:</p>
+  <pre><code>.\.venv\Scripts\python.exe run.py -v</code></pre>
+  <p>Look for a line saying <b><code>connected to source</code></b>. Type in Word — the translations should appear about a second later, with no saving.</p>
+  <div class="warn">
+    <b>This is the step most likely to fail</b>
+    <p>The Word connection was written on a Mac and has never met a real copy of Word. If it does not connect, copy the whole PowerShell output and send it over — do not do this test for the first time on the morning of a class.</p>
+  </div>
+</li>
+
+<li>
+  <span class="t">Optional — better Hebrew</span>
+  <p>Hebrew is the weakest of the three offline models. If the classroom has internet, get a free key at <a href="https://aistudio.google.com/apikey">aistudio.google.com/apikey</a> and run this once per PowerShell window, before <code>run.py</code>:</p>
+  <pre><code>$env:GEMINI_API_KEY = "paste-your-key-here"</code></pre>
+  <p>Nothing breaks without it — Hebrew just falls back to the offline model automatically, including if the internet drops in the middle of a class.</p>
+</li>
+
+</ol>
+
+<div class="good">
+  <b>Setup is done</b>
+  <p>From here on, everything is Part 2. You never repeat Part 1 unless the laptop is wiped.</p>
+</div>
+
+<h2 id="class">Part 2 — Every class
+  <span class="sub">About two minutes of setup, and one minute at the end.</span>
+</h2>
+
+<div class="card">
+<h3>Before class</h3>
+
+<p><b>1. Open Word and start a brand-new blank document.</b></p>
+
+<div class="warn">
+  <b>Start a new document, do not reopen last week's</b>
+  <p>When the program starts it reads whatever is already in the document and translates all of it. Reopening an old transcript means the whole thing gets re-translated onto the projectors before the lesson has begun.</p>
+</div>
+
+<p><b>2. Start the program.</b> Open PowerShell and paste:</p>
+<pre><code>cd C:\midrash-translate
+.\.venv\Scripts\python.exe run.py</code></pre>
+
+<p>It prints a set of addresses that look like this:</p>
+<pre><code>  control panel   http://192.168.1.42:8000/
+  Francais        http://192.168.1.42:8000/display/fr
+  Espanol         http://192.168.1.42:8000/display/es
+  Hebrew          http://192.168.1.42:8000/display/he</code></pre>
+
+<p><b>3. Open each projector's page.</b> On each projector machine, open a browser, type in that language's address, and press <kbd>F</kbd> for fullscreen.</p>
+
+<p><b>4. Leave the PowerShell window open.</b> Minimise it if you like — closing it stops the translation.</p>
+
+<div class="note">
+  <b>Order does not matter</b>
+  <p>Word before the program, or program before Word — either way. It keeps retrying until it finds the document.</p>
+</div>
+
+<h3>During class</h3>
+<p>Nothing to do. The transcriber types in Word as usual; editing and deleting lines is fine and the projectors follow along.</p>
+<p>If you want to keep an eye on it, the <b>control panel</b> address shows how far behind each language is, how many projectors are connected, and any errors.</p>
+
+<h3>After class — export first, then close</h3>
+
+<div class="warn">
+  <b>Export before you close anything</b>
+  <p>The translations live only in the program's memory. Closing the PowerShell window first loses them permanently — the English is still safe in Word, but the French, Spanish and Hebrew are gone.</p>
+</div>
+
+<p><b>1.</b> Open the <b>control panel</b> address and click <b>Export .docx</b>.</p>
+<p><b>2.</b> Four Word files appear in <code>C:\midrash-translate\sessions\</code>, in a folder named for today's date — French, Spanish, Hebrew and the English source.</p>
+<p><b>3.</b> Now go to the PowerShell window and press <kbd>Ctrl</kbd>+<kbd>C</kbd> to stop it. Save the Word document as usual.</p>
+</div>
+
+<h2 id="restart">Do I restart it between classes?
+  <span class="sub">Yes. Short answer: stop it after every class, start it fresh for the next one.</span>
+</h2>
+
+<div class="scroll">
+<table>
+  <thead><tr><th>Situation</th><th>What to do</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><b>New class</b></td>
+      <td><b>Restart.</b> Press <kbd>Ctrl</kbd>+<kbd>C</kbd>, start a new Word document, run <code>run.py</code> again. If you leave it running, the new class's lines pile on top of the last one's and the export mixes both classes into one file.</td>
+    </tr>
+    <tr>
+      <td><b>Back-to-back sessions, same transcript</b></td>
+      <td>Leave it running. Nothing gained by restarting.</td>
+    </tr>
+    <tr>
+      <td><b>A projector page froze or was closed</b></td>
+      <td>Just reload that page. It refills with the whole lesson so far. No need to touch the program.</td>
+    </tr>
+    <tr>
+      <td><b>Word was closed by accident</b></td>
+      <td>Reopen it. The program reconnects on its own. Anything typed while Word was shut arrives on reconnect.</td>
+    </tr>
+    <tr>
+      <td><b>The laptop went to sleep</b></td>
+      <td>Check the control panel. If a language looks stuck, restart the program — but <b>export first</b> if the lesson has content worth keeping.</td>
+    </tr>
+    <tr>
+      <td><b>Translations stopped or fell far behind</b></td>
+      <td>Export, <kbd>Ctrl</kbd>+<kbd>C</kbd>, run <code>run.py</code> again. It picks the document back up from the top.</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<h2 id="trouble">If something goes wrong</h2>
+
+<div class="scroll">
+<table>
+  <thead><tr><th>What you see</th><th>Fix</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><code>python</code> is not recognised</td>
+      <td>Python was installed without “Add to PATH”. Re-run the Python installer, choose <b>Modify</b>, and tick it.</td>
+    </tr>
+    <tr>
+      <td>Projector page will not load</td>
+      <td>The firewall box was missed or denied. Windows Security → Firewall → Allow an app → find Python → tick <b>Private</b>. Also confirm both machines are on the same Wi-Fi.</td>
+    </tr>
+    <tr>
+      <td>Page loads but stays empty</td>
+      <td>Check the PowerShell window for <code>connected to source</code>. If it is missing, Word is not open, or it is watching a different document.</td>
+    </tr>
+    <tr>
+      <td>First line takes ages, rest are fine</td>
+      <td>Normal. The models load on the first translation. Type one throwaway line before class starts.</td>
+    </tr>
+    <tr>
+      <td>Everything lags behind</td>
+      <td>Open <code>config.yaml</code> in Notepad and lower <code>debounce_ms</code> from <code>700</code> to about <code>400</code>. Restart the program.</td>
+    </tr>
+    <tr>
+      <td>Lines flicker and rewrite while typing</td>
+      <td>The opposite fix — raise <code>debounce_ms</code> to <code>1200</code>. Restart the program.</td>
+    </tr>
+    <tr>
+      <td>Text too small at the back</td>
+      <td>Press <kbd>+</kbd> on that projector, or raise <code>display.font_size_px</code> in <code>config.yaml</code> to make it permanent.</td>
+    </tr>
+    <tr>
+      <td>Hebrew reads badly</td>
+      <td>Expected from the offline model. Set the Gemini key (step 8) if there is internet in the room.</td>
+    </tr>
+    <tr>
+      <td>A term keeps coming out wrong</td>
+      <td>Add it to <code>glossary.json</code> and restart. This is the cheapest way to improve quality.</td>
+    </tr>
+    <tr>
+      <td>Something else</td>
+      <td>Restart with <code>run.py -v</code>, reproduce it, and send the PowerShell output.</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<h3>Getting later fixes onto this laptop</h3>
+<p>When the code is updated, in PowerShell:</p>
+<pre><code>cd C:\midrash-translate
+git pull</code></pre>
+<p>If the update also changes the required libraries, run this after it:</p>
+<pre><code>.\.venv\Scripts\python.exe -m pip install -r requirements.txt</code></pre>
+
+<h2 id="keys">Projector page keys</h2>
+
+<div class="scroll">
+<table>
+  <thead><tr><th>Key</th><th>Effect</th></tr></thead>
+  <tbody>
+    <tr><td><kbd>F</kbd></td><td>Fullscreen — press this on every projector</td></tr>
+    <tr><td><kbd>+</kbd> / <kbd>−</kbd></td><td>Bigger or smaller text</td></tr>
+    <tr><td><kbd>S</kbd></td><td>Show the English underneath each translated line</td></tr>
+  </tbody>
+</table>
+</div>
+
+<p>Scrolling up to read back is fine — a <b>↓ live</b> button appears to jump back to following the lecture. The page also stops the projector blanking on its own.</p>
+
+<footer>
+  Full technical detail is in <code>README.md</code> in this folder. Settings live in <code>config.yaml</code>; terms to protect or force-translate live in <code>glossary.json</code>.
+</footer>
+
+</div>
+
+<script>
+  document.querySelectorAll('pre').forEach(function (pre) {
+    var b = document.createElement('button');
+    b.className = 'copy';
+    b.type = 'button';
+    b.textContent = 'Copy';
+    b.addEventListener('click', function () {
+      var text = pre.querySelector('code').innerText;
+      var done = function () {
+        b.textContent = 'Copied';
+        setTimeout(function () { b.textContent = 'Copy'; }, 1400);
+      };
+      // navigator.clipboard is unavailable when this page is opened as a
+      // local file, which is exactly how it will be read on the classroom
+      // laptop -- so fall back to the old selection-based copy.
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text).then(done, function () {});
+        return;
+      }
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand('copy'); done(); } catch (e) {}
+      document.body.removeChild(ta);
+    });
+    pre.appendChild(b);
+  });
+</script>
