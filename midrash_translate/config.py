@@ -34,6 +34,14 @@ class Config:
         return self.raw["source"]["debounce_ms"] / 1000.0
 
     @property
+    def speaker_labels(self) -> list[str]:
+        return self.raw.get("speakers", {}).get("labels", []) or []
+
+    @property
+    def speaker_names(self) -> dict:
+        return self.raw.get("speakers", {}).get("names", {}) or {}
+
+    @property
     def targets(self) -> list[Target]:
         return [Target(**t) for t in self.raw["targets"]]
 

@@ -10,6 +10,16 @@ source:
   # when it ends in sentence punctuation, or as soon as a later paragraph exists.
   debounce_ms: 700
 
+# The transcriber prefixes lines to say who is speaking. The label is split off
+# before translation -- a model will otherwise mangle it or absorb it into the
+# first word -- and shown as an attribution on the projector.
+speakers:
+  labels: [RY, T]
+  # Optional per-language rendering. Defaults to the label itself, which keeps
+  # it recognisable across all four screens.
+  names:
+    RY: { he: "ר\"י" }
+
 targets:
   - code: fr
     name: Francais

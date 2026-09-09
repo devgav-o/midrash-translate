@@ -64,7 +64,11 @@ BACKEND=opusmt ./dev.sh       # real translation
 ./dev.sh notes.txt            # watch your own file
 ```
 
-Edit the watched file and save; the browser pages update. No Word required.
+Edit the watched file **and save**; the browser pages update on save. The file
+source only ever sees saved bytes -- TextEdit in particular autosaves when it
+loses focus, which makes updates look like they depend on clicking the browser.
+The Word source does not behave this way: COM reads the live in-memory document,
+so it sees keystrokes as they are typed, with no save.
 
 ### On the classroom Windows machine (once)
 
@@ -123,6 +127,45 @@ $env:GEMINI_API_KEY = "..."   # free key from https://aistudio.google.com/apikey
 
 To run fully offline, comment out `backend_by_lang` in `config.yaml`.
 
+## Speaker labels
+
+The transcriber prefixes lines with who is talking:
+
+```
+RY: today we will be learning רשי.
+T: can you repeat that please?
+```
+
+Labels listed under `speakers.labels` in `config.yaml` are split off before
+translation -- a model otherwise mangles `RY:` or absorbs it into the first
+word -- and shown as a chip on the projector and in bold in the export. Matching
+is case-insensitive and tolerant of spacing (`ry :` works), and a label never
+matches inside a word (`TRY:` is not `T`).
+
+`speakers.names` optionally renders a label differently per language (the shipped
+config writes `RY` as `ר"י` on the Hebrew screen); it defaults to the label
+itself so it stays recognisable across all four screens.
+
+## Mixed-script lines
+
+The transcriber switches script mid-sentence, and those terms are quotations,
+not words to translate:
+
+```
+the רשי says that the גמרא asks a question.
+   fr -> le רשי dit que le גמרא pose une question.
+   he -> רשי אומר כי גמרא שואל שאלה.
+```
+
+Runs in any script listed under `translation.preserve_scripts` pass through
+verbatim to every target, Hebrew included -- it is already the script the
+audience reads. Multi-word phrases stay one unit, a line that is entirely a
+quotation skips the model, and a preserved right-to-left run inside a
+left-to-right line is wrapped in bidi isolates so the punctuation stays put.
+
+Without this, `en->fr` returned a row of 250 dashes and `en->he` silently
+dropped the terms.
+
 ## Glossary
 
 `glossary.json` handles the terms machine translation mangles. Terms are masked
@@ -134,11 +177,21 @@ works identically on every backend.
 
 Two things learned the hard way, both worth respecting:
 
-**The marker must survive the model.** Measured over the three Opus-MT models,
-`%0%` and `[0]` survive 12/12 probes; `⟦0⟧` survives **0/12** — unusual Unicode
-becomes `<unk>` and is dropped. A dropped marker means every protected sentence
-silently falls back to unprotected translation, so the glossary looks configured
-but does nothing. Run `scripts/check_markers.py` after changing models.
+**The marker must survive the model — with several in one sentence.** A
+single-marker probe is not enough, and neither is testing only French. Measured
+over the three models on 5 multi-marker sentences each:
+
+| marker | fr | es | he | verdict |
+|---|---|---|---|---|
+| `Z0` | 5/5 | 5/5 | 5/5 | in use |
+| `TERM0` | 5/5 | 5/5 | 4/5 | risks being translated to `TERME0` |
+| `X0X` | 5/5 | 5/5 | 4/5 | Hebrew transliterates it to `אקס-או-אקס` |
+| `%0%` | 2/5 | 4/5 | **0/5** | |
+| `⟦0⟧` | 0/5 | 0/5 | 0/5 | becomes `<unk>` and is dropped |
+
+A dropped marker means the sentence silently falls back, so the glossary looks
+configured but does nothing. Run `scripts/check_markers.py` after changing
+models.
 
 **Prefer proper nouns in `replace`.** The model cannot grammatically agree with a
 token it cannot see. Forcing the common-noun phrase `the sages` to `los Sabios`
@@ -165,8 +218,9 @@ errors. A queue depth that grows steadily means that language is not keeping up.
 .venv/bin/python tests/test_state.py     # or: pytest
 ```
 
-15 tests covering the paragraph diff (append, mid-document insert, in-place edit,
-delete), the debounce rules, stale-result rejection, and glossary masking.
+25 tests covering the paragraph diff (append, mid-document insert, in-place
+edit, delete), the debounce rules, stale-result rejection, glossary masking,
+preserved-script passthrough, and speaker-label parsing.
 
 ## Limitations
 

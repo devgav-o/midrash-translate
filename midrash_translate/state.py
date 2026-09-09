@@ -20,6 +20,9 @@ SENTENCE_END = re.compile(r'[.!?:;׃؟]["\')\]”’]?\s*$')
 class Para:
     id: int
     text: str
+    # the line minus its speaker label, which is what actually gets translated
+    body: str = ""
+    speaker: str | None = None
     # bumped on every text change; translation results carrying an older version
     # are stale and get dropped
     version: int = 0
@@ -45,15 +48,23 @@ class Change:
 class DocState:
     """Thread-safe store of the source paragraphs and their translations."""
 
-    def __init__(self, langs: list[str], debounce_s: float = 0.7):
+    def __init__(self, langs: list[str], debounce_s: float = 0.7, speakers=None):
         self.langs = list(langs)
         self.debounce_s = debounce_s
+        self.speakers = speakers
         self._lock = threading.RLock()
         self._paras: list[Para] = []
         self._by_id: dict[int, Para] = {}
         self._next_id = 1
         # paragraphs whose text changed but that are not settled enough to send
         self._dirty: set[int] = set()
+
+    def _set_text(self, para: "Para", text: str) -> None:
+        para.text = text
+        if self.speakers:
+            para.speaker, para.body = self.speakers.split(text)
+        else:
+            para.speaker, para.body = None, text
 
     # ---------------------------------------------------------------- ingest
 
@@ -85,7 +96,7 @@ class DocState:
                         if k < len(olds):
                             p = olds[k]
                             if p.text != text:
-                                p.text = text
+                                self._set_text(p, text)
                                 p.version += 1
                                 p.changed_at = now
                                 self._dirty.add(p.id)
@@ -93,6 +104,7 @@ class DocState:
                             new_paras.append(p)
                         else:
                             p = Para(id=self._next_id, text=text, version=1, changed_at=now)
+                            self._set_text(p, text)
                             self._next_id += 1
                             self._by_id[p.id] = p
                             self._dirty.add(p.id)
@@ -121,7 +133,7 @@ class DocState:
                 if p is None:
                     self._dirty.discard(pid)
                     continue
-                if not p.text.strip():
+                if not p.body.strip():
                     # blank line: nothing to translate, but it still holds a slot
                     p.translations = {lang: "" for lang in self.langs}
                     p.translated_version = {lang: p.version for lang in self.langs}
@@ -130,10 +142,10 @@ class DocState:
                 settled = (
                     p.id != last_id
                     or (now - p.changed_at) >= self.debounce_s
-                    or bool(SENTENCE_END.search(p.text))
+                    or bool(SENTENCE_END.search(p.body))
                 )
                 if settled:
-                    ready.append(Change(p.id, p.text, p.version))
+                    ready.append(Change(p.id, p.body, p.version))
                     self._dirty.discard(pid)
             return ready
 
@@ -166,17 +178,23 @@ class DocState:
             return self._as_line(p, lang) if p else None
 
     def _as_line(self, p: Para, lang: str) -> dict:
+        speaker = (self.speakers.display(p.speaker, lang)
+                   if (self.speakers and p.speaker) else None)
         return {
             "id": p.id,
             "text": p.translations.get(lang, ""),
-            "src": p.text,
+            "src": p.body,
+            "speaker": speaker,
             "pending": p.pending(lang),
         }
 
-    def all_lines(self, lang: str) -> list[tuple[str, str]]:
-        """(translated, source) pairs, for export."""
+    def all_lines(self, lang: str) -> list[tuple[str, str, str | None]]:
+        """(translated, source, speaker) triples, for export."""
         with self._lock:
-            return [(p.translations.get(lang, ""), p.text) for p in self._paras]
+            return [(p.translations.get(lang, ""), p.body,
+                     self.speakers.display(p.speaker, lang)
+                     if (self.speakers and p.speaker) else None)
+                    for p in self._paras]
 
     def stats(self) -> dict:
         with self._lock:
@@ -184,7 +202,7 @@ class DocState:
                 "paragraphs": len(self._paras),
                 "dirty": len(self._dirty),
                 "pending": {
-                    lang: sum(1 for p in self._paras if p.text.strip() and p.pending(lang))
+                    lang: sum(1 for p in self._paras if p.body.strip() and p.pending(lang))
                     for lang in self.langs
                 },
             }

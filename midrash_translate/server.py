@@ -16,6 +16,7 @@ from fastapi.responses import HTMLResponse, JSONResponse
 
 from . import export as export_mod
 from .engine import Engine
+from .speakers import SpeakerParser
 from .state import DocState
 from .watcher import SourceWatcher, build_reader
 
@@ -74,7 +75,8 @@ class Pipeline:
     def __init__(self, cfg, reader_override: str | None = None):
         self.cfg = cfg
         self.hub = Hub()
-        self.state = DocState(cfg.lang_codes, cfg.debounce_s)
+        self.speakers = SpeakerParser(cfg.speaker_labels, cfg.speaker_names)
+        self.state = DocState(cfg.lang_codes, cfg.debounce_s, self.speakers)
         self.engine = Engine(cfg, self.state, self._on_translation)
         self.watcher = SourceWatcher(
             build_reader(cfg, reader_override), self._on_paragraphs, cfg.poll_s

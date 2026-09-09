@@ -10,6 +10,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from midrash_translate.speakers import SpeakerParser  # noqa: E402
 from midrash_translate.state import DocState  # noqa: E402
 from midrash_translate.translators.glossary import Glossary  # noqa: E402
 from midrash_translate.watcher import split_word_text  # noqa: E402
@@ -23,8 +24,8 @@ def flush(state: DocState):
     return state.collect_ready()
 
 
-def new_state(debounce=0.0) -> DocState:
-    return DocState(LANGS, debounce_s=debounce)
+def new_state(debounce=0.0, speakers=None) -> DocState:
+    return DocState(LANGS, debounce_s=debounce, speakers=speakers)
 
 
 def test_append_keeps_existing_ids():
@@ -155,6 +156,59 @@ def test_all_hebrew_line_skips_the_model():
     assert not g.has_translatable_text(masked), \
         "a line that is entirely a quotation must not be sent to the model"
     assert g.has_translatable_text(g.mask("the רשי says", "he")[0])
+
+
+def test_speaker_label_is_split_off_before_translation():
+    """'RY:' is an attribution, not content. A model asked to translate it
+    mangles it or absorbs it into the first word."""
+    sp = SpeakerParser(["RY", "T"])
+    s = new_state(speakers=sp)
+    s.update_source(["RY: today we will learn.", "T: can you repeat that?"])
+    ready = flush(s)
+    assert [c.text for c in ready] == ["today we will learn.", "can you repeat that?"], \
+        "the label must not reach the translator"
+
+    for c in ready:
+        s.apply_translation(c.para_id, "fr", c.version, "TRANSLATED")
+    lines = s.snapshot("fr")
+    assert [l["speaker"] for l in lines] == ["RY", "T"]
+    assert [l["text"] for l in lines] == ["TRANSLATED", "TRANSLATED"]
+
+
+def test_speaker_label_renders_per_language():
+    sp = SpeakerParser(["RY"], {"RY": {"he": 'ר"י'}})
+    s = new_state(speakers=sp)
+    s.update_source(["RY: shalom."])
+    assert s.snapshot("he")[0]["speaker"] == 'ר"י'
+    assert s.snapshot("fr")[0]["speaker"] == "RY", "defaults to the label itself"
+
+
+def test_unlabelled_line_has_no_speaker():
+    sp = SpeakerParser(["RY", "T"])
+    s = new_state(speakers=sp)
+    s.update_source(["just a plain line."])
+    line = s.snapshot("fr")[0]
+    assert line["speaker"] is None and line["src"] == "just a plain line."
+
+
+def test_label_only_line_is_not_left_pending():
+    """The transcriber types 'RY:' and pauses before the sentence."""
+    sp = SpeakerParser(["RY"])
+    s = new_state(speakers=sp)
+    s.update_source(["RY:"])
+    flush(s)
+    line = s.snapshot("fr")[0]
+    assert line["speaker"] == "RY"
+    assert line["pending"] is False, "an empty body must not spin forever"
+
+
+def test_speaker_parser_tolerates_spacing_and_case():
+    sp = SpeakerParser(["RY", "T"])
+    assert sp.split("RY: hello") == ("RY", "hello")
+    assert sp.split("RY:hello") == ("RY", "hello")
+    assert sp.split("  ry :  hello") == ("RY", "hello"), "canonical label form kept"
+    assert sp.split("T: hi") == ("T", "hi")
+    assert sp.split("TRY: hi")[0] is None, "must not match inside a word"
 
 
 def test_split_word_text_handles_word_control_chars():

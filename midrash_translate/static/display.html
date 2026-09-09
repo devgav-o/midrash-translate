@@ -38,6 +38,12 @@
     font-size: var(--font-size); line-height: 1.45;
     margin: 0 0 .55em; white-space: pre-wrap; word-wrap: break-word;
   }
+  .line .who {
+    display: inline-block; font-size: .52em; font-weight: 700;
+    letter-spacing: .06em; color: var(--accent); background: #1b2434;
+    padding: .12em .5em; border-radius: .3em; margin-inline-end: .5em;
+    vertical-align: .18em; white-space: nowrap;
+  }
   .line.pending { color: var(--dim); }
   .line.pending::after {
     content: "…"; opacity: .6; animation: blink 1.1s ease-in-out infinite;
@@ -94,7 +100,14 @@ function render() {
     if (!d.src || !d.src.trim()) continue;
     const p = document.createElement("p");
     p.className = "line" + (d.pending || !d.text ? " pending" : "");
-    p.textContent = d.text || "";
+    if (d.speaker) {
+      const who = document.createElement("span");
+      who.className = "who";
+      who.textContent = d.speaker;
+      p.appendChild(who);
+    }
+    // appendChild, not textContent, so the speaker chip survives
+    p.appendChild(document.createTextNode(d.text || ""));
     if (showSource && d.src) {
       const s = document.createElement("span");
       s.className = "src";

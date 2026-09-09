@@ -34,11 +34,15 @@ def write_docx(path: Path, title: str, lines: list[tuple[str, str]],
     if rtl:
         _set_rtl(heading)
 
-    for translated, source in lines:
+    for translated, source, speaker in lines:
         text = translated.strip()
         if not text and not source.strip():
             continue
-        para = doc.add_paragraph(text or source)
+        para = doc.add_paragraph()
+        if speaker:
+            run = para.add_run(f"{speaker}: ")
+            run.bold = True
+        para.add_run(text or source)
         if rtl:
             _set_rtl(para)
         if include_source and source.strip():
@@ -65,7 +69,8 @@ def export_session(state, targets, out_dir: Path, label: str | None = None,
         written.append(str(path))
 
     # the English source, so the archive is self-contained
-    src_lines = [(src, "") for _, src in state.all_lines(targets[0].code)] if targets else []
+    src_lines = ([(src, "", spk) for _, src, spk in state.all_lines(targets[0].code)]
+                 if targets else [])
     src_path = session_dir / f"{stamp}_en.docx"
     write_docx(src_path, f"English - {stamp}", src_lines)
     written.append(str(src_path))
