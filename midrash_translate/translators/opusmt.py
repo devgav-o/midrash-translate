@@ -13,6 +13,13 @@ from .base import Translator
 
 log = logging.getLogger(__name__)
 
+# Loading MarianMTModel.from_pretrained concurrently from several threads races
+# in transformers 5.x: the model comes up with a randomly initialised lm_head
+# ("lm_head.weight MISSING | newly initialized" in the load report) and then
+# emits empty strings or degenerate repetition, with no exception raised. Each
+# worker thread warms its own language, so serialise the loads.
+_LOAD_LOCK = threading.Lock()
+
 DEFAULT_MODELS = {
     "fr": "Helsinki-NLP/opus-mt-en-fr",
     "es": "Helsinki-NLP/opus-mt-en-es",
@@ -51,8 +58,11 @@ class OpusMTTranslator(Translator):
         from transformers import MarianMTModel, MarianTokenizer
 
         log.info("loading %s for %s", self.model_id, self.lang)
-        self._tok = MarianTokenizer.from_pretrained(self.model_id, cache_dir=self.cache_dir)
-        model = MarianMTModel.from_pretrained(self.model_id, cache_dir=self.cache_dir)
+        with _LOAD_LOCK:
+            self._tok = MarianTokenizer.from_pretrained(
+                self.model_id, cache_dir=self.cache_dir)
+            model = MarianMTModel.from_pretrained(
+                self.model_id, cache_dir=self.cache_dir)
         model.eval()
         if self.quantize:
             try:
@@ -62,7 +72,23 @@ class OpusMTTranslator(Translator):
             except Exception as exc:  # quantization is an optimization, not a requirement
                 log.warning("int8 quantization unavailable for %s: %s", self.lang, exc)
         self._model = model
-        torch.set_num_threads(max(1, (torch.get_num_threads() or 4) // 2))
+        self._canary()
+
+    def _canary(self) -> None:
+        """Prove the model actually produces output before serving a class.
+        A silently mis-loaded model returns empty strings rather than raising,
+        which would show up as blank projectors ten minutes into a lecture."""
+        probe = "Good morning everyone."
+        try:
+            result = self.translate_batch([probe])[0]
+        except Exception as exc:
+            raise RuntimeError(f"{self.model_id} failed its load check: {exc}") from exc
+        if not result.strip():
+            raise RuntimeError(
+                f"{self.model_id} loaded but produced no output for {probe!r}; "
+                f"the weights are probably mis-loaded"
+            )
+        log.info("%s check ok: %r -> %r", self.lang, probe, result)
 
     def translate_batch(self, sentences: list[str]) -> list[str]:
         if not sentences:
