@@ -6,13 +6,14 @@ Hub.publish, which is the only thread-safe crossing point in the process.
 from __future__ import annotations
 
 import asyncio
+import html
 import json
 import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, Response
 
 from . import export as export_mod
 from .engine import Engine
@@ -128,6 +129,33 @@ class Pipeline:
         }
 
 
+DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+
+
+def _print_section(name: str, stamp: str, lines, rtl: bool,
+                   include_source: bool) -> str:
+    """One language as printable HTML. Escaped by hand rather than templated --
+    a lecture transcript is arbitrary typed text and lands here verbatim."""
+    esc = html.escape
+    parts = [f'<section dir="{"rtl" if rtl else "ltr"}">',
+             f"<h1>{esc(name)}</h1>",
+             f'<p class="stamp">{esc(stamp)}</p>']
+    written = 0
+    for translated, source, speaker in lines:
+        text = translated.strip() or source.strip()
+        if not text:
+            continue
+        written += 1
+        prefix = f"<b>{esc(speaker)}:</b> " if speaker else ""
+        parts.append(f'<p class="line">{prefix}{esc(text)}</p>')
+        if include_source and source.strip() and translated.strip():
+            parts.append(f'<p class="src">{esc(source.strip())}</p>')
+    if not written:
+        parts.append('<p class="empty">Nothing has been transcribed yet.</p>')
+    parts.append("</section>")
+    return "".join(parts)
+
+
 def _render(template, /, **subs: str) -> str:
     """Positional-only so that a substitution key can be called `name`."""
     html = (STATIC / template).read_text(encoding="utf-8")
@@ -140,6 +168,8 @@ def create_app(cfg, reader_override: str | None = None,
                include_source: bool = False) -> FastAPI:
     pipeline = Pipeline(cfg, reader_override)
     targets = {t.code: t for t in cfg.targets}
+    # the English source is downloadable too, though it is nobody's translation
+    downloadable = [t.code for t in cfg.targets] + ["en"]
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -162,7 +192,15 @@ def create_app(cfg, reader_override: str | None = None,
             f'<span class="code">/display/{t.code}</span></li>'
             for t in cfg.targets
         )
-        return _render("index.html", rows=rows)
+        names = {t.code: t.name for t in cfg.targets} | {"en": "English (source)"}
+        downloads = "".join(
+            f'<li><span class="lang">{names[c]}</span>'
+            f'<a class="dl" href="/download/{c}.docx">.docx</a>'
+            f'<a class="dl" href="/print/{c}?auto=1" target="_blank" rel="noopener">PDF</a>'
+            f"</li>"
+            for c in downloadable
+        )
+        return _render("index.html", rows=rows, downloads=downloads)
 
     @app.get("/display/{lang}", response_class=HTMLResponse)
     async def display(lang: str):
@@ -224,5 +262,60 @@ def create_app(cfg, reader_override: str | None = None,
         )
         log.info("exported %d files", len(written))
         return JSONResponse({"files": written})
+
+    # ---- downloads. export_session writes to the classroom machine's disk;
+    # these hand the same documents to whichever browser asked, which is what
+    # you want when the control panel is open on a phone or another laptop.
+
+    def _check(code: str) -> None:
+        if code not in downloadable:
+            raise HTTPException(404, f"no language {code!r}")
+
+    @app.get("/download/{code}.docx")
+    async def download_docx(code: str):
+        _check(code)
+        stamp = export_mod.stamp_now()
+        data = export_mod.docx_bytes(
+            export_mod.title_for(cfg.targets, code, stamp),
+            export_mod.lines_for(pipeline.state, cfg.targets, code),
+            rtl=export_mod.is_rtl(cfg.targets, code),
+            include_source=include_source and code != "en",
+        )
+        log.info("download %s.docx (%d bytes)", code, len(data))
+        return Response(data, media_type=DOCX_MIME, headers={
+            "Content-Disposition": f'attachment; filename="{stamp}_{code}.docx"'})
+
+    @app.get("/download/all.zip")
+    async def download_zip():
+        stamp = export_mod.stamp_now()
+        data = export_mod.session_zip(pipeline.state, cfg.targets, stamp, include_source)
+        log.info("download all.zip (%d bytes)", len(data))
+        return Response(data, media_type="application/zip", headers={
+            "Content-Disposition": f'attachment; filename="{stamp}.zip"'})
+
+    @app.get("/print/{code}", response_class=HTMLResponse)
+    async def print_page(code: str):
+        """Printable transcript. The browser's own Save as PDF turns it into the
+        PDF -- see the note at the top of export.py for why that beats making
+        one server-side."""
+        stamp = export_mod.stamp_now().replace("_", " ")
+        if code == "all":
+            codes = downloadable
+        else:
+            _check(code)
+            codes = [code]
+        body = "".join(
+            _print_section(
+                next((t.name for t in cfg.targets if t.code == c), "English"),
+                stamp,
+                export_mod.lines_for(pipeline.state, cfg.targets, c),
+                export_mod.is_rtl(cfg.targets, c),
+                include_source and c != "en",
+            )
+            for c in codes
+        )
+        title = "Transcript" if code == "all" else f"{code.upper()} transcript"
+        return HTMLResponse(_render("print.html", title=f"{title} - {stamp}", body=body),
+                            headers={"Cache-Control": "no-store, max-age=0"})
 
     return app

@@ -334,9 +334,38 @@ cd midrash-translate</code></pre>
   <p>The translations live only in the program's memory. Closing the PowerShell window first loses them permanently — the English is still safe in Word, but the French, Spanish and Hebrew are gone.</p>
 </div>
 
-<p><b>1.</b> Open the <b>control panel</b> address and click <b>Export .docx</b>.</p>
-<p><b>2.</b> Four Word files appear in <code>C:\midrash-translate\sessions\</code>, in a folder named for today's date — French, Spanish, Hebrew and the English source.</p>
-<p><b>3.</b> Now go to the PowerShell window and press <kbd>Ctrl</kbd>+<kbd>C</kbd> to stop it. Save the Word document as usual.</p>
+<p>Open the <b>control panel</b> address — in any browser, on the classroom laptop or on your phone — and take your pick under <b>Download the transcript</b>:</p>
+
+<div class="scroll">
+<table>
+  <thead><tr><th>Button</th><th>What you get</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><b>All languages (.zip)</b></td>
+      <td>One download with all four Word files inside — French, Spanish, Hebrew, English. The usual choice.</td>
+    </tr>
+    <tr>
+      <td><b>All as one PDF</b></td>
+      <td>Opens a printable page and the print dialog. Pick <b>Save as PDF</b> as the destination. One PDF, one language per page.</td>
+    </tr>
+    <tr>
+      <td><b>.docx</b> / <b>PDF</b> per language</td>
+      <td>Just one language, when that is all somebody wants.</td>
+    </tr>
+    <tr>
+      <td><b>Save .docx to sessions folder</b></td>
+      <td>Writes the four files onto the classroom laptop at <code>C:\midrash-translate\sessions\</code>, in a folder named for today's date. Nothing downloads — use this when you want the archive to stay on that machine.</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<div class="note">
+  <b>Why PDF goes through the print dialog</b>
+  <p>The browser already lays Hebrew out correctly, right-to-left, with no internet. Printing from it gives a better PDF than the program could build itself, and there is nothing extra to install.</p>
+</div>
+
+<p>Then go to the PowerShell window, press <kbd>Ctrl</kbd>+<kbd>C</kbd> to stop it, and save the Word document as usual.</p>
 </div>
 
 <h2 id="restart">Do I restart it between classes?
@@ -369,7 +398,7 @@ cd midrash-translate</code></pre>
     </tr>
     <tr>
       <td><b>Translations stopped or fell far behind</b></td>
-      <td>Export, <kbd>Ctrl</kbd>+<kbd>C</kbd>, run <code>run.py</code> again. It picks the document back up from the top.</td>
+      <td>Download the transcript, <kbd>Ctrl</kbd>+<kbd>C</kbd>, run <code>run.py</code> again. It picks the document back up from the top.</td>
     </tr>
   </tbody>
 </table>

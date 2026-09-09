@@ -9,17 +9,27 @@
          color: #f2f4f8; margin: 0; padding: 3rem 2rem; }
   main { max-width: 620px; margin: 0 auto; }
   h1 { font-size: 1.4rem; margin: 0 0 .3rem; }
+  h2 { font-size: .8rem; text-transform: uppercase; letter-spacing: .09em;
+       color: #7c8798; margin: 2.6rem 0 .8rem; }
   p.sub { color: #7c8798; margin: 0 0 2rem; }
-  ul { list-style: none; padding: 0; }
+  p.hint { color: #7c8798; font-size: .85rem; margin: .8rem 0 0; }
+  ul { list-style: none; padding: 0; margin: 0; }
   li { padding: .9rem 1.1rem; margin-bottom: .6rem; background: #171b24;
        border-radius: 10px; display: flex; align-items: baseline; gap: .8rem; }
   a { color: #6ea8fe; text-decoration: none; font-size: 1.1rem; font-weight: 600; }
   a:hover { text-decoration: underline; }
   .code { color: #7c8798; font: 13px ui-monospace, monospace; margin-inline-start: auto; }
-  .row { display: flex; gap: .8rem; margin-top: 2rem; }
-  button { background: #232a38; color: #f2f4f8; border: 0; border-radius: 8px;
-           padding: .7rem 1.1rem; font: inherit; cursor: pointer; }
-  button:hover { background: #2c3546; }
+  .lang { font-weight: 600; margin-inline-end: auto; }
+  a.dl { font-size: .85rem; font-weight: 600; color: #f2f4f8; background: #232a38;
+         border-radius: 7px; padding: .35rem .8rem; text-decoration: none; }
+  a.dl:hover { background: #2c3546; text-decoration: none; }
+  .row { display: flex; flex-wrap: wrap; gap: .8rem; margin-top: 1rem; }
+  button, a.btn { background: #232a38; color: #f2f4f8; border: 0; border-radius: 8px;
+           padding: .7rem 1.1rem; font: inherit; cursor: pointer;
+           text-decoration: none; font-size: 1rem; font-weight: 400; }
+  button:hover, a.btn:hover { background: #2c3546; text-decoration: none; }
+  a.btn.primary { background: #2b4a7a; }
+  a.btn.primary:hover { background: #35598f; }
   pre { background: #171b24; border-radius: 10px; padding: 1rem; overflow: auto;
         font: 12.5px/1.5 ui-monospace, monospace; color: #a9b4c4; margin-top: 1rem; }
 </style>
@@ -29,9 +39,20 @@
   <h1>midrash-translate</h1>
   <p class="sub">Open one of these fullscreen on each projector.</p>
   <ul>{{rows}}</ul>
+
+  <h2>Download the transcript</h2>
+  <div class="row">
+    <a class="btn primary" href="/download/all.zip">All languages (.zip)</a>
+    <a class="btn" href="/print/all?auto=1" target="_blank" rel="noopener">All as one PDF</a>
+  </div>
+  <ul style="margin-top:.8rem">{{downloads}}</ul>
+  <p class="hint">PDF opens a printable page and the browser's print dialog —
+    choose <b>Save as PDF</b> as the destination.</p>
+
+  <h2>This machine</h2>
   <div class="row">
     <button id="status-btn">Refresh status</button>
-    <button id="export-btn">Export .docx</button>
+    <button id="export-btn">Save .docx to sessions folder</button>
   </div>
   <pre id="out">—</pre>
 </main>

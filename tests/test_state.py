@@ -10,6 +10,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from midrash_translate import export as export_mod  # noqa: E402
 from midrash_translate.speakers import SpeakerParser  # noqa: E402
 from midrash_translate.state import DocState  # noqa: E402
 from midrash_translate.translators.glossary import Glossary  # noqa: E402
@@ -259,6 +260,98 @@ def test_strip_markers_never_leaks_to_the_projector():
     _, restores = g.mask("the Midrash", "fr")
     assert "Z" not in g.strip_markers("le Z0 dit", restores)
     assert "Z" not in g.strip_markers("le Z7 dit", restores), "unknown index dropped"
+
+
+
+# ---- export and download
+
+
+class _Target:
+    def __init__(self, code, name, rtl=False):
+        self.code, self.name, self.rtl = code, name, rtl
+
+
+TARGETS = [_Target("fr", "Francais"), _Target("he", "Hebrew", rtl=True)]
+
+
+def _translated_state():
+    s = new_state(speakers=SpeakerParser(["RY"], {}))
+    s.update_source(["RY: the sages spoke.", "he answered."])
+    for change in flush(s):
+        for lang in LANGS:
+            s.apply_translation(change.para_id, lang, change.version,
+                                f"[{lang}] {change.text}")
+    return s
+
+
+def test_english_export_is_the_source_not_a_translation():
+    s = _translated_state()
+    rows = export_mod.lines_for(s, TARGETS, "en")
+    assert [r[0] for r in rows] == ["the sages spoke.", "he answered."]
+    assert rows[0][2] == "RY", "the speaker label survives into the English export"
+    assert all("[fr]" not in r[0] for r in rows), "English must carry no translation"
+
+
+def test_docx_bytes_is_a_real_document():
+    s = _translated_state()
+    blob = export_mod.docx_bytes("Hebrew - now", export_mod.lines_for(s, TARGETS, "he"),
+                                 rtl=True)
+    assert blob[:2] == b"PK", "a .docx is a zip"
+    import zipfile, io
+    xml = zipfile.ZipFile(io.BytesIO(blob)).read("word/document.xml").decode("utf-8")
+    assert "[he] the sages spoke." in xml
+    assert "w:bidi" in xml, "Hebrew must be marked right-to-left or Word renders it wrong"
+
+
+def test_session_zip_holds_every_language_plus_english():
+    import zipfile, io
+    s = _translated_state()
+    blob = export_mod.session_zip(s, TARGETS, "2026-01-01_0900")
+    names = zipfile.ZipFile(io.BytesIO(blob)).namelist()
+    assert len(names) == 3
+    for code in ("fr", "he", "en"):
+        assert f"2026-01-01_0900/2026-01-01_0900_{code}.docx" in names
+
+
+def test_download_endpoints_serve_each_language():
+    from fastapi.testclient import TestClient
+    from midrash_translate import config as config_mod
+    from midrash_translate.server import create_app
+
+    cfg = config_mod.load(Path(__file__).resolve().parents[1] / "config.yaml")
+    cfg.raw["translation"]["backend"] = "echo"
+    cfg.raw["translation"].pop("backend_by_lang", None)
+    app = create_app(cfg, reader_override=str(Path(__file__).parent / "_probe.txt"))
+
+    probe = Path(__file__).parent / "_probe.txt"
+    probe.write_text("RY: the sages spoke.\n", encoding="utf-8")
+    try:
+        with TestClient(app) as client:
+            for code in ("fr", "es", "he", "en"):
+                r = client.get(f"/download/{code}.docx")
+                assert r.status_code == 200, f"{code}: {r.status_code}"
+                assert r.content[:2] == b"PK"
+                assert f"_{code}.docx" in r.headers["content-disposition"]
+            assert client.get("/download/all.zip").content[:2] == b"PK"
+            assert client.get("/download/xx.docx").status_code == 404
+            assert client.get("/print/he").status_code == 200
+            assert client.get("/print/all").status_code == 200
+            assert client.get("/print/xx").status_code == 404
+    finally:
+        probe.unlink(missing_ok=True)
+
+
+def test_print_page_escapes_the_transcript():
+    s = new_state()
+    s.update_source(["<script>alert(1)</script> & so on"])
+    for change in flush(s):
+        for lang in LANGS:
+            s.apply_translation(change.para_id, lang, change.version, change.text)
+    from midrash_translate.server import _print_section
+    out = _print_section("Hebrew", "now", export_mod.lines_for(s, TARGETS, "he"),
+                         True, False)
+    assert "<script>" not in out, "typed text must never become markup"
+    assert "&lt;script&gt;" in out and "&amp; so on" in out
 
 
 if __name__ == "__main__":

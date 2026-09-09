@@ -90,7 +90,14 @@ After that, no network is needed for the local models.
 2. `.\.venv\Scripts\python.exe run.py` — it prints a LAN address.
 3. On each projector open its page and press `F` for fullscreen:
    `/display/fr`, `/display/es`, `/display/he`.
-4. At the end, open `/` and click **Export .docx**. Files land in `sessions/<date>/`.
+4. At the end, open `/` and take the transcript:
+   - **All languages (.zip)** or a single **.docx** -- downloads to whichever
+     machine the control panel is open on, phone included.
+   - **PDF** -- opens `/print/<lang>` and the browser's print dialog; choose
+     *Save as PDF*. The browser lays Hebrew out right-to-left correctly and
+     needs no network, which is why there is no PDF library here.
+   - **Save .docx to sessions folder** -- the four files onto the classroom
+     machine's disk at `sessions/<date>/`, as before.
 
 Order does not matter — start the server before or after Word; it retries until
 it finds the document.
@@ -222,9 +229,11 @@ errors. A queue depth that grows steadily means that language is not keeping up.
 .venv/bin/python tests/test_state.py     # or: pytest
 ```
 
-25 tests covering the paragraph diff (append, mid-document insert, in-place
+30 tests covering the paragraph diff (append, mid-document insert, in-place
 edit, delete), the debounce rules, stale-result rejection, glossary masking,
-preserved-script passthrough, and speaker-label parsing.
+preserved-script passthrough, speaker-label parsing, and the export/download
+routes (every language served, RTL marked in the .docx, transcript text escaped
+before it reaches the print page).
 
 ## Limitations
 

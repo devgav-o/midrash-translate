@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{title}}</title>
+<style>
+  :root { --ink: #14161a; --soft: #6b7484; --rule: #d8dce3; }
+  body { font: 17px/1.65 Georgia, "Times New Roman", serif; color: var(--ink);
+         background: #f4f5f7; margin: 0; padding: 2rem 1rem 4rem; }
+  main { max-width: 46rem; margin: 0 auto; background: #fff; padding: 3rem 3.2rem;
+         box-shadow: 0 1px 4px rgba(0,0,0,.12); }
+  .bar { max-width: 46rem; margin: 0 auto 1rem; display: flex; gap: .7rem;
+         align-items: center; font: 15px/1 system-ui, -apple-system, sans-serif; }
+  .bar button { background: #232a38; color: #fff; border: 0; border-radius: 8px;
+                padding: .65rem 1.1rem; font: inherit; cursor: pointer; }
+  .bar button:hover { background: #333d51; }
+  .bar span { color: var(--soft); }
+  section + section { margin-top: 3rem; }
+  h1 { font: 600 1.5rem/1.3 system-ui, -apple-system, sans-serif; margin: 0 0 .2rem; }
+  .stamp { font: 13px system-ui, sans-serif; color: var(--soft);
+           margin: 0 0 1.6rem; padding-bottom: 1rem; border-bottom: 1px solid var(--rule); }
+  p.line { margin: 0 0 .85rem; }
+  p.line b { font-family: system-ui, -apple-system, sans-serif; font-size: .85em;
+             letter-spacing: .02em; }
+  p.src { color: var(--soft); font-size: .8em; font-style: italic;
+          margin: -.6rem 0 .9rem; }
+  [dir="rtl"] { text-align: right; }
+  .empty { color: var(--soft); font-style: italic; }
+
+  @media print {
+    /* the printed page is the deliverable here -- the browser's own
+       "Save as PDF" is what produces the PDF, so leave nothing on screen
+       that should not end up in the file */
+    body { background: #fff; padding: 0; font-size: 12pt; }
+    main { max-width: none; padding: 0; box-shadow: none; }
+    .bar { display: none; }
+    section { break-after: page; }
+    section:last-child { break-after: auto; }
+    h1, .stamp { break-after: avoid; }
+    p.line { break-inside: avoid; }
+  }
+  @page { margin: 18mm 16mm; }
+</style>
+</head>
+<body>
+<div class="bar">
+  <button id="print">Save as PDF / Print</button>
+  <span>Choose <b>Save as PDF</b> as the destination in the print dialog.</span>
+</div>
+<main>{{body}}</main>
+<script>
+document.getElementById("print").onclick = () => window.print();
+// Opened from the control panel's PDF button: go straight to the dialog. The
+// load event, not DOMContentLoaded -- printing before layout settles has been
+// known to drop the last page.
+if (new URLSearchParams(location.search).get("auto") === "1") {
+  window.addEventListener("load", () => setTimeout(() => window.print(), 150));
+}
+</script>
+</body>
+</html>
