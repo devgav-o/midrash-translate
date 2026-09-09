@@ -1,0 +1,67 @@
+# midrash-translate configuration
+
+source:
+  # Which open Word document to watch.
+  #   "active"          -> whatever document is frontmost in Word
+  #   "<substring>"     -> first open document whose name contains this substring
+  document: active
+  poll_ms: 400          # how often to read the Word document
+  # A paragraph is translated once it has been quiet this long, or immediately
+  # when it ends in sentence punctuation, or as soon as a later paragraph exists.
+  debounce_ms: 700
+
+targets:
+  - code: fr
+    name: Francais
+    rtl: false
+  - code: es
+    name: Espanol
+    rtl: false
+  - code: he
+    name: Hebrew
+    rtl: true
+
+translation:
+  # opusmt = free, offline, unlimited. gemini = free tier, better quality, needs
+  # GEMINI_API_KEY and a network connection. echo = no translation, for testing.
+  backend: opusmt
+
+  # Per-language override. Hebrew is where the local models are weakest, so it
+  # goes to Gemini when GEMINI_API_KEY is set, and falls back to the local model
+  # automatically if the key is missing, the quota is spent, or the network dies
+  # mid-lecture. Comment this out to run fully offline.
+  backend_by_lang:
+    he: gemini
+
+  opusmt:
+    models:
+      fr: Helsinki-NLP/opus-mt-en-fr
+      es: Helsinki-NLP/opus-mt-en-es
+      he: Helsinki-NLP/opus-mt-en-he
+    # int8 dynamic quantization, ~2-3x faster on CPU. Silently skipped on Apple
+    # Silicon (no quantized engine); works on the Windows classroom machine.
+    quantize: true
+    beams: 1              # 1 = greedy, fastest. 4 = slower, slightly better.
+    cache_dir: models
+
+  gemini:
+    model: gemini-2.0-flash
+    # API key is read from the GEMINI_API_KEY environment variable.
+    timeout_s: 12
+    # Falls back to the opusmt backend if the API errors or is rate limited.
+    fallback: opusmt
+
+  cache_size: 20000       # translated sentences kept in memory
+  glossary: glossary.json
+
+server:
+  host: 0.0.0.0
+  port: 8000
+
+display:
+  font_size_px: 44
+  max_lines: 400          # lines kept on screen; older ones scroll out of the DOM
+  show_source: false      # set true to show the English under each translated line
+
+export:
+  dir: sessions

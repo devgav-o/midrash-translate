@@ -1,0 +1,26 @@
+{
+  "_comment": "Terms machine translation mangles or renders inconsistently. Both lists are masked before translation and substituted back afterwards, so they work identically on every backend.",
+
+  "_protect": "Keeps the English term verbatim. Fine for French/Spanish; wrong for Hebrew, where a Latin-script word mid-sentence looks out of place - use 'replace' with a Hebrew form instead.",
+
+  "_replace": "Forces an exact per-language rendering, and takes precedence over 'protect'. IMPORTANT: prefer proper nouns. The model cannot grammatically agree with a token it cannot see, so forcing a common-noun phrase can produce broken agreement - forcing 'the sages' to 'los Sabios' yielded 'el los Sabios dice'. Proper nouns (Rashi, Midrash, Rambam) carry no agreement and are always safe.",
+
+  "protect": [
+    "Mishnah",
+    "Gemara",
+    "Talmud",
+    "Halakhah",
+    "Aggadah",
+    "Tosafot"
+  ],
+
+  "replace": {
+    "Midrash": { "he": "מדרש" },
+    "Torah":   { "he": "תורה", "fr": "Torah", "es": "Torá" },
+    "Rashi":   { "he": "רש\"י", "fr": "Rachi", "es": "Rashi" },
+    "Rambam":  { "he": "רמב\"ם", "fr": "Rambam", "es": "Rambam" },
+    "Tosafot": { "he": "תוספות" },
+    "Gemara":  { "he": "גמרא" },
+    "Mishnah": { "he": "משנה" }
+  }
+}

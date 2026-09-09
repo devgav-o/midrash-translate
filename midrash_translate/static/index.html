@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>midrash-translate</title>
+<style>
+  body { font: 16px/1.6 system-ui, -apple-system, sans-serif; background: #0f1115;
+         color: #f2f4f8; margin: 0; padding: 3rem 2rem; }
+  main { max-width: 620px; margin: 0 auto; }
+  h1 { font-size: 1.4rem; margin: 0 0 .3rem; }
+  p.sub { color: #7c8798; margin: 0 0 2rem; }
+  ul { list-style: none; padding: 0; }
+  li { padding: .9rem 1.1rem; margin-bottom: .6rem; background: #171b24;
+       border-radius: 10px; display: flex; align-items: baseline; gap: .8rem; }
+  a { color: #6ea8fe; text-decoration: none; font-size: 1.1rem; font-weight: 600; }
+  a:hover { text-decoration: underline; }
+  .code { color: #7c8798; font: 13px ui-monospace, monospace; margin-inline-start: auto; }
+  .row { display: flex; gap: .8rem; margin-top: 2rem; }
+  button { background: #232a38; color: #f2f4f8; border: 0; border-radius: 8px;
+           padding: .7rem 1.1rem; font: inherit; cursor: pointer; }
+  button:hover { background: #2c3546; }
+  pre { background: #171b24; border-radius: 10px; padding: 1rem; overflow: auto;
+        font: 12.5px/1.5 ui-monospace, monospace; color: #a9b4c4; margin-top: 1rem; }
+</style>
+</head>
+<body>
+<main>
+  <h1>midrash-translate</h1>
+  <p class="sub">Open one of these fullscreen on each projector.</p>
+  <ul>{{rows}}</ul>
+  <div class="row">
+    <button id="status-btn">Refresh status</button>
+    <button id="export-btn">Export .docx</button>
+  </div>
+  <pre id="out">—</pre>
+</main>
+<script>
+const out = document.getElementById("out");
+async function show(url, opts) {
+  out.textContent = "…";
+  try {
+    const r = await fetch(url, opts);
+    out.textContent = JSON.stringify(await r.json(), null, 2);
+  } catch (e) { out.textContent = String(e); }
+}
+document.getElementById("status-btn").onclick = () => show("/api/status");
+document.getElementById("export-btn").onclick = () => show("/api/export", { method: "POST" });
+show("/api/status");
+</script>
+</body>
+</html>
