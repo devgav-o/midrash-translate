@@ -35,6 +35,7 @@ class LanguageWorker(threading.Thread):
         self.ready = False
         self.last_error: str | None = None
         self.translated = 0
+        self.empty_results = 0
 
     def submit(self, change: Change) -> None:
         with self._cv:
@@ -85,6 +86,17 @@ class LanguageWorker(threading.Thread):
 
             self.translated += 1
             elapsed = (time.monotonic() - started) * 1000
+            log.debug("%s para=%s v=%s %.0fms  %r -> %r",
+                      self.lang, para_id, version, elapsed, text, result)
+
+            if text.strip() and not result.strip():
+                # never blank a line that has real source text: a projector
+                # showing nothing reads as a broken system. Keep whatever the
+                # line had and surface the count in /api/status.
+                self.empty_results += 1
+                log.warning("%s: empty translation for para %s (%r); keeping "
+                            "previous text", self.lang, para_id, text[:60])
+                continue
             if elapsed > 1500:
                 log.info("%s slow translation: %.0fms for %d chars",
                          self.lang, elapsed, len(text))
@@ -143,6 +155,7 @@ class Engine:
                 "ready": w.ready,
                 "queue": w.depth(),
                 "translated": w.translated,
+                "empty_results": w.empty_results,
                 "cache_hits": w.translator.hits,
                 "cache_misses": w.translator.misses,
                 "error": w.last_error,
