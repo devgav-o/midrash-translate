@@ -53,6 +53,8 @@ class Hub:
 
     def _fanout(self, lang: str, message: dict) -> None:
         targets = list(self.conns.get(lang, ()))
+        log.debug("send %s -> %d viewer(s): %d line(s)", lang, len(targets),
+                  len(message.get("lines", [])))
         if not targets:
             return
         payload = json.dumps(message, ensure_ascii=False)
@@ -166,7 +168,10 @@ def create_app(cfg, reader_override: str | None = None,
         if not target:
             raise HTTPException(404, f"no target language {lang!r}")
         disp = cfg.display
-        return _render(
+        # the projector page must never come from cache: a stale copy silently
+        # keeps whatever bugs the last version had
+        headers = {"Cache-Control": "no-store, max-age=0"}
+        return HTMLResponse(_render(
             "display.html",
             lang=target.code,
             name=target.name,
@@ -174,7 +179,7 @@ def create_app(cfg, reader_override: str | None = None,
             font_size=str(disp.get("font_size_px", 44)),
             max_lines=str(disp.get("max_lines", 400)),
             show_source="true" if disp.get("show_source") else "false",
-        )
+        ), headers=headers)
 
     @app.websocket("/ws/{lang}")
     async def ws_endpoint(ws: WebSocket, lang: str):
@@ -183,6 +188,7 @@ def create_app(cfg, reader_override: str | None = None,
             return
         await ws.accept()
         pipeline.hub.add(lang, ws)
+        log.info("viewer connected to %s (%d now)", lang, pipeline.hub.count(lang))
         try:
             await ws.send_text(json.dumps(
                 {"type": "snapshot", "lines": pipeline.state.snapshot(lang)},
@@ -196,6 +202,8 @@ def create_app(cfg, reader_override: str | None = None,
             pass
         finally:
             pipeline.hub.remove(lang, ws)
+            log.info("viewer disconnected from %s (%d left)", lang,
+                     pipeline.hub.count(lang))
 
     @app.get("/api/status")
     async def status():

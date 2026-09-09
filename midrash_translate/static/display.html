@@ -25,6 +25,7 @@
   }
   header .title { color: var(--fg); font-weight: 600; letter-spacing: .02em; }
   header .spacer { flex: 1; }
+  header .age { font-variant-numeric: tabular-nums; opacity: .75; }
   #dot { width: 10px; height: 10px; border-radius: 50%; background: #d4574d; }
   #dot.on { background: #4fb477; }
   #lines {
@@ -59,6 +60,7 @@
   <span id="dot"></span>
   <span class="title">{{name}}</span>
   <span class="spacer"></span>
+  <span class="age" id="age"></span>
   <span id="hint">+ / −  font · S source · F fullscreen</span>
 </header>
 <main id="lines" dir="{{dir}}"></main>
@@ -131,6 +133,8 @@ function connect() {
   };
   ws.onerror = () => ws.close();
   ws.onmessage = (ev) => {
+    lastMessageAt = Date.now();
+    messageCount++;
     const msg = JSON.parse(ev.data);
     if (msg.type === "snapshot") {
       lines.clear();
@@ -174,13 +178,31 @@ document.addEventListener("keydown", (e) => {
   }
 });
 
-document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState !== "visible") return;
+// A window that is visible but NOT focused -- the split-screen case, and every
+// projector on a second monitor -- never fires visibilitychange. So recover on
+// window focus as well, or the page only catches up when someone clicks it.
+function resync() {
   connect();
   render();
   if (following) scrollToBottom();
   requestWakeLock();
+}
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") resync();
 });
+window.addEventListener("focus", resync);
+window.addEventListener("pageshow", resync);
+
+// Shows how long since the last message actually arrived. If this keeps ticking
+// up while the transcriber is typing, the page is not receiving; if it stays
+// near zero but the text looks stale, the browser is not repainting.
+const ageEl = document.getElementById("age");
+let lastMessageAt = Date.now();
+let messageCount = 0;
+setInterval(() => {
+  const secs = Math.round((Date.now() - lastMessageAt) / 1000);
+  ageEl.textContent = `${messageCount} msg · ${secs}s ago`;
+}, 1000);
 
 // stop the projector machine blanking the screen mid-lecture
 let wakeLock = null;
