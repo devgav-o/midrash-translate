@@ -51,6 +51,16 @@ translation:
     # Falls back to the opusmt backend if the API errors or is rate limited.
     fallback: opusmt
 
+  # Text in these scripts is passed through verbatim to every target language,
+  # including the one that shares the script. The transcriber types English and
+  # quotes terms in their original script ("the רשי says that the גמרא asks"),
+  # and those are quotations, not words to translate.
+  preserve_scripts: [hebrew]
+
+  # Wrap a preserved right-to-left run in bidi isolates when the target language
+  # is left-to-right, so the surrounding punctuation stays where it belongs.
+  isolate_bidi: true
+
   cache_size: 20000       # translated sentences kept in memory
   glossary: glossary.json
 

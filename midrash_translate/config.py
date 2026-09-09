@@ -49,6 +49,14 @@ class Config:
         return self.raw["translation"].get(backend, {}) or {}
 
     @property
+    def preserve_scripts(self) -> list[str]:
+        return self.raw["translation"].get("preserve_scripts", ["hebrew"])
+
+    @property
+    def isolate_bidi(self) -> bool:
+        return self.raw["translation"].get("isolate_bidi", True)
+
+    @property
     def cache_size(self) -> int:
         return self.raw["translation"].get("cache_size", 20000)
 

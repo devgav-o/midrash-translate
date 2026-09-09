@@ -48,6 +48,7 @@ class CachingTranslator:
         self._lock = threading.Lock()
         self.hits = 0
         self.misses = 0
+        self.lost_markers = 0
         # set when the primary backend cannot be used at all (no API key, model
         # missing) but a fallback exists -- the language keeps working, degraded
         self.degraded = False
@@ -95,8 +96,16 @@ class CachingTranslator:
                 out[i] = cached
                 self.hits += 1
                 continue
-            self.misses += 1
             masked, restores = self.glossary.mask(sent, self.lang)
+            if not self.glossary.has_translatable_text(masked):
+                # e.g. a line that is entirely a Hebrew quotation. Handing the
+                # model nothing but markers makes it hallucinate.
+                final = self.glossary.unmask(masked, restores) or sent
+                out[i] = final
+                self._cache_put(sent, final)
+                self.hits += 1
+                continue
+            self.misses += 1
             todo.append((i, masked, restores))
 
         if todo:
@@ -114,16 +123,24 @@ class CachingTranslator:
                                 self.lang, self.inner.label, exc, self.fallback.label)
                     results = self.fallback.translate_batch(payload)
 
-            for (i, _masked, restores), raw in zip(todo, results):
+            for (i, masked, restores), raw in zip(todo, results):
                 restored = self.glossary.unmask(raw, restores)
                 if restored is None:
-                    # the model swallowed a marker; retranslate this one sentence
-                    # unprotected rather than show ⟦0⟧ on a projector
+                    # The model swallowed a marker. Do NOT retranslate the
+                    # sentence unprotected: for a line containing quoted Hebrew
+                    # that is exactly what produces rows of dashes. Retry the
+                    # masked text once, then give up and show the source, which
+                    # is at least readable and has the quotations intact.
+                    self.lost_markers += 1
                     try:
-                        restored = self.inner.translate_batch([sentences[i]])[0]
+                        retry = self.inner.translate_batch([masked])[0]
+                        restored = self.glossary.unmask(retry, restores)
                     except Exception:
-                        restored = raw
-                    restored = self.glossary.strip_markers(restored, restores)
+                        restored = None
+                    if restored is None:
+                        log.warning("%s: markers lost for %r; showing source",
+                                    self.lang, sentences[i][:60])
+                        restored = sentences[i]
                 final = restored.strip()
                 out[i] = final
                 self._cache_put(sentences[i], final)

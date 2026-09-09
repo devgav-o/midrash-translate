@@ -112,7 +112,12 @@ class Engine:
         self.cfg = cfg
         self.state = state
         self.on_update = on_update
-        self.glossary = Glossary.load(cfg.glossary_path)
+        self.glossary = Glossary.load(
+            cfg.glossary_path,
+            rtl_langs={t.code for t in cfg.targets if t.rtl},
+            preserve_scripts=cfg.preserve_scripts,
+            isolate_bidi=cfg.isolate_bidi,
+        )
         self.workers: dict[str, LanguageWorker] = {}
 
         for target in cfg.targets:
@@ -158,6 +163,7 @@ class Engine:
                 "empty_results": w.empty_results,
                 "cache_hits": w.translator.hits,
                 "cache_misses": w.translator.misses,
+                "lost_markers": w.translator.lost_markers,
                 "error": w.last_error,
             }
             for lang, w in self.workers.items()

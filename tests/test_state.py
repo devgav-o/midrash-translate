@@ -116,6 +116,47 @@ def test_translation_marks_line_not_pending():
     assert s.snapshot("fr")[0]["pending"] is True, "languages are tracked separately"
 
 
+def test_hebrew_injection_passes_through_verbatim():
+    """The transcriber types English and quotes terms in Hebrew. Those are
+    quotations, not words to translate -- fed to an en->fr model they come back
+    as rows of dashes, and en->he silently drops them."""
+    g = Glossary(preserve_scripts=["hebrew"], rtl_langs={"he"})
+    masked, restores = g.mask("the רשי says that the גמרא asks a question.", "fr")
+    assert masked == "the Z0 says that the Z1 asks a question."
+    assert "רשי" in restores[0] and "גמרא" in restores[1]
+    assert g.unmask("le Z0 dit que le Z1 pose une question.", restores) == \
+        "le \u2068רשי\u2069 dit que le \u2068גמרא\u2069 pose une question."
+
+
+def test_hebrew_target_keeps_injection_verbatim_without_isolates():
+    """Even into Hebrew: the quoted term is already in the reader's script, and
+    an RTL run inside an RTL line needs no bidi isolation."""
+    g = Glossary(preserve_scripts=["hebrew"], rtl_langs={"he"})
+    _, restores = g.mask("today we learn רשי.", "he")
+    assert restores == ["רשי"], "no isolate characters for an RTL target"
+
+
+def test_multi_word_hebrew_phrase_masked_as_one_run():
+    g = Glossary(preserve_scripts=["hebrew"], rtl_langs={"he"})
+    masked, restores = g.mask("He quoted בבא מציעא at length.", "he")
+    assert masked == "He quoted Z0 at length."
+    assert restores == ["בבא מציעא"]
+
+
+def test_hebrew_run_does_not_swallow_sentence_period():
+    g = Glossary(preserve_scripts=["hebrew"], rtl_langs={"he"})
+    masked, _ = g.mask("we will learn רשי. Then we continue.", "he")
+    assert masked == "we will learn Z0. Then we continue.", masked
+
+
+def test_all_hebrew_line_skips_the_model():
+    g = Glossary(preserve_scripts=["hebrew"], rtl_langs={"he"})
+    masked, _ = g.mask('רש"י אומר', "he")
+    assert not g.has_translatable_text(masked), \
+        "a line that is entirely a quotation must not be sent to the model"
+    assert g.has_translatable_text(g.mask("the רשי says", "he")[0])
+
+
 def test_split_word_text_handles_word_control_chars():
     raw = "First para.\rSecond\x0bline.\r\x07\rLast.\r"
     assert split_word_text(raw) == ["First para.", "Second", "line.", "", "Last."]
@@ -140,9 +181,9 @@ def test_glossary_forces_rendering_the_model_would_have_translated():
     because by then the English is gone. Masking can."""
     g = Glossary(replace={"the sages": {"fr": "les Sages", "he": "חז\"ל"}})
     masked, restores = g.mask("what the sages say", "fr")
-    assert masked == "what %0% say", masked
+    assert masked == "what Z0 say", masked
     # what the model gives back, with the marker carried through untouched
-    assert g.unmask("ce que %0% disent", restores) == "ce que les Sages disent"
+    assert g.unmask("ce que Z0 disent", restores) == "ce que les Sages disent"
 
     _, he_restores = g.mask("what the sages say", "he")
     assert he_restores == ["חז\"ל"], "the same term resolves per language"
@@ -162,8 +203,8 @@ def test_glossary_case_insensitive_match_keeps_forced_form():
 def test_strip_markers_never_leaks_to_the_projector():
     g = Glossary(protect=["Midrash"])
     _, restores = g.mask("the Midrash", "fr")
-    assert "%" not in g.strip_markers("le %0% dit", restores)
-    assert "%" not in g.strip_markers("le %7% dit", restores), "unknown index dropped"
+    assert "Z" not in g.strip_markers("le Z0 dit", restores)
+    assert "Z" not in g.strip_markers("le Z7 dit", restores), "unknown index dropped"
 
 
 if __name__ == "__main__":
