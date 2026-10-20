@@ -91,12 +91,12 @@ After that, no network is needed for the local models.
 3. On each projector open its page and press `F` for fullscreen:
    `/display/fr`, `/display/es`, `/display/he`.
 4. At the end, open `/` and take the transcript:
-   - **All languages (.zip)** or a single **.docx** -- downloads to whichever
-     machine the control panel is open on, phone included.
+   - **Download all four (.zip)**, or **Word** for one language -- downloads to
+     whichever machine the control panel is open on, phone included.
    - **PDF** -- opens `/print/<lang>` and the browser's print dialog; choose
      *Save as PDF*. The browser lays Hebrew out right-to-left correctly and
      needs no network, which is why there is no PDF library here.
-   - **Save .docx to sessions folder** -- the four files onto the classroom
+   - **Save Word files onto this computer** -- the four files onto the classroom
      machine's disk at `sessions/<date>/`, as before.
 
 Order does not matter — start the server before or after Word; it retries until
@@ -108,10 +108,57 @@ it finds the document.
 |---|---|
 | `+` / `-` | font size |
 | `S` | show the English source under each line |
+| `D` | day / night colours |
 | `F` | fullscreen |
 
-Scroll up to read back; a **↓ live** button returns to following the lecture.
+Font size and day/night are remembered per language in that browser, so a screen
+set up once comes back the same next class.
+
+Scroll up to read back; a **↓ Live** button returns to following the lecture.
 The page requests a screen wake lock so the projector does not blank mid-class.
+
+### What the projector page is doing to help people read
+
+The screen is a reading surface for a room, not a dashboard, and three choices
+follow from that:
+
+**The current line is the only one in full ink.** The line before it is a step
+lighter, everything above that a step lighter again. Tone only, never size --
+a line that resizes when the next one lands makes the whole page jump, and the
+eye loses its place. Full ink goes to the last line that has *words* on it, not
+to the empty paragraph waiting on its translation, or the screen would go grey
+for the second between the lecturer speaking and the text arriving.
+
+**Nothing blinks and nothing scrolls smoothly.** The only moving thing is a slow
+caret where the next line will appear, and it stops entirely under
+`prefers-reduced-motion`. Anything faster is unbearable an hour into a shiur.
+
+**The chrome leaves.** The message counter and the key hints fade out four
+seconds after the last mouse move; `?debug=1` pins them on. There is no
+connection light, because a green dot that is green for ninety minutes is noise
+-- the page says *Reconnecting to the server* only once it has actually been
+down for two and a half seconds.
+
+Light background is the default because a projector in a lit beis midrash loses
+a dark field to the ambient wash. Press `D` if the room is dark.
+
+### Typography
+
+Colours are sampled from the yeshiva's logo -- `#15155C` indigo, `#0B4D9A`
+royal, `#0177C8` cerulean -- and the mark is served from `/logo.png` rather than
+hotlinked, because the classroom machine is offline.
+
+The transcript is set in Palatino Linotype, which leads the stack for one
+practical reason: **it ships on Windows carrying Zapf's Hebrew as well as the
+Latin**, and with no network a webfont is not available, so one installed family
+has to cover both scripts. Frank Ruehl, David, New Peninim and Arial Hebrew
+follow it for machines where it is missing; browsers fall back per glyph, so
+Latin and Hebrew each land on the best face present.
+
+The speaker label hangs in the margin rather than sitting inline as a chip, so
+every line of the transcript starts on the same vertical edge and the eye reads
+down one straight line. The column is capped at 28em -- about sixty characters
+-- however wide the projector is.
 
 > The page deliberately does **not** use CSS `scroll-behavior: smooth`. Animated
 > scrolling is driven by the browser's frame loop, which is throttled in
@@ -220,8 +267,12 @@ Growing this file is the cheapest quality improvement available.
 | text too small at the back | raise `display.font_size_px`, or press `+` |
 | one language much slower | point just that language at `gemini` |
 
-`/` shows per-language queue depth, cache hit rate, viewer count and backend
-errors. A queue depth that grows steadily means that language is not keeping up.
+`/` says in one line whether the transcript is being read and how many lines are
+in, marks each language blue once a projector is actually showing it, and names
+any language that has errored or fallen behind. The full per-language figures --
+queue depth, cache hit rate, viewer count, backend errors -- are under
+**Technical details**. A queue depth that grows steadily means that language is
+not keeping up.
 
 ## Tests
 

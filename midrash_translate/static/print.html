@@ -4,29 +4,65 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{{title}}</title>
+<link rel="icon" href="/logo.png">
 <style>
-  :root { --ink: #14161a; --soft: #6b7484; --rule: #d8dce3; }
-  body { font: 17px/1.65 Georgia, "Times New Roman", serif; color: var(--ink);
-         background: #f4f5f7; margin: 0; padding: 2rem 1rem 4rem; }
-  main { max-width: 46rem; margin: 0 auto; background: #fff; padding: 3rem 3.2rem;
-         box-shadow: 0 1px 4px rgba(0,0,0,.12); }
-  .bar { max-width: 46rem; margin: 0 auto 1rem; display: flex; gap: .7rem;
-         align-items: center; font: 15px/1 system-ui, -apple-system, sans-serif; }
-  .bar button { background: #232a38; color: #fff; border: 0; border-radius: 8px;
-                padding: .65rem 1.1rem; font: inherit; cursor: pointer; }
-  .bar button:hover { background: #333d51; }
-  .bar span { color: var(--soft); }
-  section + section { margin-top: 3rem; }
-  h1 { font: 600 1.5rem/1.3 system-ui, -apple-system, sans-serif; margin: 0 0 .2rem; }
-  .stamp { font: 13px system-ui, sans-serif; color: var(--soft);
-           margin: 0 0 1.6rem; padding-bottom: 1rem; border-bottom: 1px solid var(--rule); }
-  p.line { margin: 0 0 .85rem; }
-  p.line b { font-family: system-ui, -apple-system, sans-serif; font-size: .85em;
-             letter-spacing: .02em; }
-  p.src { color: var(--soft); font-size: .8em; font-style: italic;
-          margin: -.6rem 0 .9rem; }
+  :root {
+    --ink: #15155C; --quiet: #6E7391; --blue: #0B4D9A; --rule: #DEDEE8;
+    /* Georgia has no Hebrew, so the Hebrew transcript used to print in whatever
+       the browser fell back to. This stack carries both scripts. */
+    --serif: "Palatino Linotype", "Book Antiqua", Palatino, "Frank Ruehl CLM",
+             FrankRuehl, David, "New Peninim MT", "Noto Serif Hebrew",
+             "Arial Hebrew", Georgia, serif;
+    --sans: "Segoe UI", -apple-system, system-ui, "Helvetica Neue",
+            "Noto Sans Hebrew", "Arial Hebrew", Arial, sans-serif;
+  }
+  body {
+    font: 17px/1.7 var(--serif); color: var(--ink);
+    background: #EFEEEA; margin: 0; padding: 2rem 1rem 4rem;
+  }
+  main {
+    max-width: 44rem; margin: 0 auto; background: #fff; padding: 3rem 3.4rem;
+    box-shadow: 0 1px 3px rgba(21, 21, 92, .16);
+  }
+  .bar {
+    max-width: 44rem; margin: 0 auto 1rem; display: flex; gap: .8rem;
+    align-items: center; font: 15px/1.4 var(--sans);
+  }
+  .bar button {
+    background: var(--blue); color: #fff; border: 1px solid var(--blue);
+    border-radius: 2px; padding: .7rem 1.15rem; font: 600 .95rem/1 var(--sans);
+    cursor: pointer;
+  }
+  .bar button:hover { background: #0177C8; border-color: #0177C8; }
+  .bar span { color: var(--quiet); }
+  .bar button:focus-visible { outline: 3px solid #0177C8; outline-offset: 2px; }
+
+  .mast { display: flex; align-items: flex-end; gap: 1rem; margin-bottom: 2.4rem; }
+  .mast img { height: 40px; width: auto; }
+
+  section + section { margin-top: 3.5rem; }
+  h1 { font: 400 1.5rem/1.3 var(--serif); color: var(--blue); margin: 0 0 .25rem; }
+  .stamp {
+    font: 13px var(--sans); color: var(--quiet);
+    margin: 0 0 1.8rem; padding-bottom: 1rem; border-bottom: 1px solid var(--rule);
+    /* a date is digits and hyphens, all bidi-neutral: inside the Hebrew section
+       it reorders into "1702 2026-09-09" unless it is pinned left-to-right */
+    direction: ltr;
+  }
+  [dir="rtl"] .stamp { text-align: right; }
+  /* the speaker hangs in the margin here too, so the printed transcript reads
+     down one straight edge the way the projector page does */
+  p.line { position: relative; margin: 0 0 .8rem; padding-inline-start: 3.6rem; }
+  p.line b {
+    position: absolute; inset-inline-start: 0; width: 3.1rem; text-align: end;
+    font: 600 .84em/1.85 var(--sans); letter-spacing: .03em; color: var(--blue);
+  }
+  p.src {
+    color: var(--quiet); font: .8em/1.6 var(--sans);
+    margin: -.5rem 0 .9rem; padding-inline-start: 3.6rem;
+  }
   [dir="rtl"] { text-align: right; }
-  .empty { color: var(--soft); font-style: italic; }
+  .empty { color: var(--quiet); font-style: italic; }
 
   @media print {
     /* the printed page is the deliverable here -- the browser's own
@@ -35,6 +71,7 @@
     body { background: #fff; padding: 0; font-size: 12pt; }
     main { max-width: none; padding: 0; box-shadow: none; }
     .bar { display: none; }
+    .mast { margin-bottom: 1.6rem; }
     section { break-after: page; }
     section:last-child { break-after: auto; }
     h1, .stamp { break-after: avoid; }
@@ -45,10 +82,13 @@
 </head>
 <body>
 <div class="bar">
-  <button id="print">Save as PDF / Print</button>
+  <button id="print">Save as PDF</button>
   <span>Choose <b>Save as PDF</b> as the destination in the print dialog.</span>
 </div>
-<main>{{body}}</main>
+<main>
+  <div class="mast"><img src="/logo.png" alt="Midrash Shmuel"></div>
+  {{body}}
+</main>
 <script>
 document.getElementById("print").onclick = () => window.print();
 // Opened from the control panel's PDF button: go straight to the dialog. The

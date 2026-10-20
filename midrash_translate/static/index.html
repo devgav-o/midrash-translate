@@ -3,71 +3,226 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>midrash-translate</title>
+<title>Midrash Shmuel — live translation</title>
+<link rel="icon" href="/logo.png">
 <style>
-  body { font: 16px/1.6 system-ui, -apple-system, sans-serif; background: #0f1115;
-         color: #f2f4f8; margin: 0; padding: 3rem 2rem; }
-  main { max-width: 620px; margin: 0 auto; }
-  h1 { font-size: 1.4rem; margin: 0 0 .3rem; }
-  h2 { font-size: .8rem; text-transform: uppercase; letter-spacing: .09em;
-       color: #7c8798; margin: 2.6rem 0 .8rem; }
-  p.sub { color: #7c8798; margin: 0 0 2rem; }
-  p.hint { color: #7c8798; font-size: .85rem; margin: .8rem 0 0; }
+  /* Same five blues as the projector pages, sampled from the logo. */
+  :root {
+    --paper:  #FBFAF8;
+    --card:   #FFFFFF;
+    --ink:    #15155C;
+    --quiet:  #6E7391;
+    --recede: #8489A6;
+    --blue:   #0B4D9A;
+    --sky:    #0177C8;
+    --rule:   #DEDEE8;
+    --warn:   #A8341F;
+    --serif: "Palatino Linotype", "Book Antiqua", Palatino, "Frank Ruehl CLM",
+             FrankRuehl, David, "New Peninim MT", "Noto Serif Hebrew",
+             "Arial Hebrew", Georgia, serif;
+    --sans: "Segoe UI", -apple-system, system-ui, "Helvetica Neue",
+            "Noto Sans Hebrew", "Arial Hebrew", Arial, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #0B1030; --card: #121843; --ink: #EDEFF8; --quiet: #949AC0;
+      --recede: #767CA6; --blue: #7FB2EC; --sky: #5AA8E8; --rule: #212856;
+      --warn: #E8A08C;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 2.4rem 1.4rem 5rem;
+    background: var(--paper); color: var(--ink);
+    font: 16px/1.6 var(--sans);
+  }
+  main { max-width: 40rem; margin: 0 auto; }
+
+  header { display: flex; align-items: flex-end; gap: 1rem; margin-bottom: 1.6rem; }
+  header img { height: 44px; width: auto; }
+  @media (prefers-color-scheme: dark) { header img { filter: brightness(0) invert(1); opacity: .82; } }
+  header h1 {
+    font: 400 1.35rem/1 var(--serif); color: var(--blue);
+    margin: 0 0 .15rem auto;
+  }
+
+  /* ---- what is happening, in words ------------------------------------- */
+
+  #state {
+    border-inline-start: 3px solid var(--sky);
+    padding: .1rem 0 .1rem 1rem; margin-bottom: 2.6rem;
+    font-size: 1.05rem;
+  }
+  #state.down { border-color: var(--warn); }
+  #state .note { display: block; color: var(--quiet); font-size: .9rem; }
+  #state.down .note { color: var(--warn); }
+
+  h2 {
+    font: 400 1.1rem/1 var(--serif); color: var(--blue);
+    margin: 2.8rem 0 .9rem; padding-bottom: .55rem;
+    border-bottom: 1px solid var(--rule);
+  }
   ul { list-style: none; padding: 0; margin: 0; }
-  li { padding: .9rem 1.1rem; margin-bottom: .6rem; background: #171b24;
-       border-radius: 10px; display: flex; align-items: baseline; gap: .8rem; }
-  a { color: #6ea8fe; text-decoration: none; font-size: 1.1rem; font-weight: 600; }
-  a:hover { text-decoration: underline; }
-  .code { color: #7c8798; font: 13px ui-monospace, monospace; margin-inline-start: auto; }
-  .lang { font-weight: 600; margin-inline-end: auto; }
-  a.dl { font-size: .85rem; font-weight: 600; color: #f2f4f8; background: #232a38;
-         border-radius: 7px; padding: .35rem .8rem; text-decoration: none; }
-  a.dl:hover { background: #2c3546; text-decoration: none; }
-  .row { display: flex; flex-wrap: wrap; gap: .8rem; margin-top: 1rem; }
-  button, a.btn { background: #232a38; color: #f2f4f8; border: 0; border-radius: 8px;
-           padding: .7rem 1.1rem; font: inherit; cursor: pointer;
-           text-decoration: none; font-size: 1rem; font-weight: 400; }
-  button:hover, a.btn:hover { background: #2c3546; text-decoration: none; }
-  a.btn.primary { background: #2b4a7a; }
-  a.btn.primary:hover { background: #35598f; }
-  pre { background: #171b24; border-radius: 10px; padding: 1rem; overflow: auto;
-        font: 12.5px/1.5 ui-monospace, monospace; color: #a9b4c4; margin-top: 1rem; }
+
+  /* ---- the three projector screens -------------------------------------- */
+
+  .screen {
+    display: flex; align-items: baseline; gap: 1rem; flex-wrap: wrap;
+    padding: .95rem 1.1rem; margin-bottom: .4rem; background: var(--card);
+    /* the rule is the status: solid blue means a projector really is showing
+       this language right now, faint means nothing is connected to it */
+    border-inline-start: 4px solid var(--rule);
+  }
+  .screen.live { border-inline-start-color: var(--sky); }
+  .screen a.open {
+    font: 1.2rem/1.2 var(--serif); color: var(--ink); text-decoration: none;
+  }
+  .screen a.open:hover { color: var(--blue); text-decoration: underline; }
+  .screen .path {
+    font: 13px ui-monospace, "Cascadia Mono", Consolas, monospace;
+    color: var(--recede); margin-inline-start: auto;
+  }
+  .screen .watch { font-size: .85rem; color: var(--quiet); min-width: 8.5em;
+                   text-align: end; }
+  .screen.live .watch { color: var(--blue); }
+
+  /* ---- transcript ------------------------------------------------------- */
+
+  .row { display: flex; flex-wrap: wrap; gap: .6rem; margin-bottom: 1.2rem; }
+  a.btn, button {
+    font: 600 .95rem/1 var(--sans); padding: .8rem 1.15rem; cursor: pointer;
+    background: var(--card); color: var(--ink);
+    border: 1px solid var(--rule); border-radius: 2px; text-decoration: none;
+  }
+  a.btn:hover, button:hover { border-color: var(--blue); color: var(--blue); }
+  a.btn.primary { background: var(--blue); border-color: var(--blue); color: #fff; }
+  a.btn.primary:hover { background: var(--sky); border-color: var(--sky); color: #fff; }
+  a:focus-visible, button:focus-visible, summary:focus-visible {
+    outline: 3px solid var(--sky); outline-offset: 2px;
+  }
+
+  .file {
+    display: flex; align-items: baseline; gap: .6rem;
+    padding: .55rem 0; border-bottom: 1px solid var(--rule);
+  }
+  .file .lang { font: 1.05rem/1.2 var(--serif); margin-inline-end: auto; }
+  .file a.dl {
+    font: .85rem/1 var(--sans); color: var(--blue); text-decoration: none;
+    padding: .35rem .6rem; border: 1px solid var(--rule); border-radius: 2px;
+  }
+  .file a.dl:hover { border-color: var(--blue); }
+
+  p.hint { color: var(--quiet); font-size: .88rem; margin: .9rem 0 0; }
+
+  details { margin-top: 3rem; }
+  summary { cursor: pointer; color: var(--quiet); font-size: .88rem; }
+  pre {
+    background: var(--card); border: 1px solid var(--rule); padding: 1rem;
+    overflow: auto; font: 12.5px/1.5 ui-monospace, Consolas, monospace;
+    color: var(--recede); margin-top: .8rem;
+  }
 </style>
 </head>
 <body>
 <main>
-  <h1>midrash-translate</h1>
-  <p class="sub">Open one of these fullscreen on each projector.</p>
-  <ul>{{rows}}</ul>
+  <header>
+    <img src="/logo.png" alt="Midrash Shmuel">
+    <h1>Live translation</h1>
+  </header>
 
-  <h2>Download the transcript</h2>
-  <div class="row">
-    <a class="btn primary" href="/download/all.zip">All languages (.zip)</a>
-    <a class="btn" href="/print/all?auto=1" target="_blank" rel="noopener">All as one PDF</a>
-  </div>
-  <ul style="margin-top:.8rem">{{downloads}}</ul>
-  <p class="hint">PDF opens a printable page and the browser's print dialog —
-    choose <b>Save as PDF</b> as the destination.</p>
+  <p id="state">Checking…<span class="note"></span></p>
 
-  <h2>This machine</h2>
+  <h2>Projector screens</h2>
+  <ul id="screens">{{rows}}</ul>
+  <p class="hint">Open each one on its projector and press <b>F</b> for fullscreen.
+    <b>+</b> and <b>−</b> set the size, <b>D</b> switches to night colours for a
+    darkened room. Both are remembered for next time.</p>
+
+  <h2>Transcript</h2>
   <div class="row">
-    <button id="status-btn">Refresh status</button>
-    <button id="export-btn">Save .docx to sessions folder</button>
+    <a class="btn primary" href="/download/all.zip">Download all four (.zip)</a>
+    <a class="btn" href="/print/all?auto=1" target="_blank" rel="noopener">Print all as one PDF</a>
   </div>
-  <pre id="out">—</pre>
+  <ul>{{downloads}}</ul>
+  <p class="hint">PDF opens the printable transcript and the browser's print
+    dialog — choose <b>Save as PDF</b> as the destination.</p>
+
+  <div class="row" style="margin-top:1.6rem">
+    <button id="export-btn">Save Word files onto this computer</button>
+  </div>
+  <p class="hint" id="export-out">They go into the <code>sessions</code> folder,
+    in a folder named for today's date.</p>
+
+  <details>
+    <summary>Technical details</summary>
+    <pre id="out">—</pre>
+  </details>
 </main>
+
 <script>
+const stateEl = document.getElementById("state");
+const noteEl = stateEl.querySelector(".note");
 const out = document.getElementById("out");
-async function show(url, opts) {
-  out.textContent = "…";
-  try {
-    const r = await fetch(url, opts);
-    out.textContent = JSON.stringify(await r.json(), null, 2);
-  } catch (e) { out.textContent = String(e); }
+
+function plural(n, one, many) { return n + " " + (n === 1 ? one : many); }
+
+function paint(s) {
+  out.textContent = JSON.stringify(s, null, 2);
+
+  const src = s.source || {};
+  const lines = (s.state || {}).paragraphs || 0;
+  const connected = !!src.connected;
+  stateEl.classList.toggle("down", !connected);
+  stateEl.firstChild.nodeValue = connected
+    ? `Reading the transcript. ${plural(lines, "line", "lines")} so far.`
+    : "Not reading the transcript yet.";
+
+  // Anything the person running the class can actually act on goes here; the
+  // rest stays in Technical details.
+  const notes = [];
+  if (!connected) {
+    notes.push(src.error ? String(src.error)
+                         : `Waiting for ${src.source || "the document"} to open.`);
+  }
+  for (const [code, st] of Object.entries(s.languages || {})) {
+    if (st.error) notes.push(`${code.toUpperCase()}: ${st.error}`);
+    else if (st.queue > 4) notes.push(`${code.toUpperCase()} is ${st.queue} lines behind.`);
+  }
+  noteEl.textContent = notes.join("  ");
+
+  for (const li of document.querySelectorAll(".screen")) {
+    const n = (s.viewers || {})[li.dataset.code] || 0;
+    li.classList.toggle("live", n > 0);
+    li.querySelector(".watch").textContent =
+      n > 0 ? plural(n, "screen showing", "screens showing") : "no screen yet";
+  }
 }
-document.getElementById("status-btn").onclick = () => show("/api/status");
-document.getElementById("export-btn").onclick = () => show("/api/export", { method: "POST" });
-show("/api/status");
+
+async function refresh() {
+  try { paint(await (await fetch("/api/status")).json()); }
+  catch (e) {
+    stateEl.classList.add("down");
+    stateEl.firstChild.nodeValue = "Cannot reach the server.";
+    noteEl.textContent = "It may have been closed. Start it again on the classroom machine.";
+  }
+}
+
+document.getElementById("export-btn").onclick = async (e) => {
+  const btn = e.currentTarget, msg = document.getElementById("export-out");
+  btn.disabled = true;
+  msg.textContent = "Saving…";
+  try {
+    const r = await (await fetch("/api/export", { method: "POST" })).json();
+    const folder = (r.files[0] || "sessions").replace(/[\\/][^\\/]*$/, "");
+    msg.textContent = `Saved ${plural(r.files.length, "file", "files")} to ${folder}`;
+  } catch (err) {
+    msg.textContent = "Could not save. " + err;
+  }
+  btn.disabled = false;
+};
+
+refresh();
+setInterval(refresh, 3000);
 </script>
 </body>
 </html>

@@ -146,7 +146,7 @@ def _print_section(name: str, stamp: str, lines, rtl: bool,
         if not text:
             continue
         written += 1
-        prefix = f"<b>{esc(speaker)}:</b> " if speaker else ""
+        prefix = f"<b>{esc(speaker)}</b>" if speaker else ""
         parts.append(f'<p class="line">{prefix}{esc(text)}</p>')
         if include_source and source.strip() and translated.strip():
             parts.append(f'<p class="src">{esc(source.strip())}</p>')
@@ -185,17 +185,26 @@ def create_app(cfg, reader_override: str | None = None,
     app = FastAPI(title="midrash-translate", lifespan=lifespan)
     app.state.pipeline = pipeline
 
+    @app.get("/logo.png")
+    async def logo():
+        # served from disk rather than hotlinked: the classroom machine is offline
+        return Response((STATIC / "logo.png").read_bytes(), media_type="image/png",
+                        headers={"Cache-Control": "max-age=86400"})
+
     @app.get("/", response_class=HTMLResponse)
     async def index():
+        # data-code and the empty .watch span are filled in by the page's poll
         rows = "".join(
-            f'<li><a href="/display/{t.code}">{t.name}</a> '
-            f'<span class="code">/display/{t.code}</span></li>'
+            f'<li class="screen" data-code="{t.code}">'
+            f'<a class="open" href="/display/{t.code}">{t.name}</a>'
+            f'<span class="path">/display/{t.code}</span>'
+            f'<span class="watch"></span></li>'
             for t in cfg.targets
         )
-        names = {t.code: t.name for t in cfg.targets} | {"en": "English (source)"}
+        names = {t.code: t.name for t in cfg.targets} | {"en": "English (what was typed)"}
         downloads = "".join(
-            f'<li><span class="lang">{names[c]}</span>'
-            f'<a class="dl" href="/download/{c}.docx">.docx</a>'
+            f'<li class="file"><span class="lang">{names[c]}</span>'
+            f'<a class="dl" href="/download/{c}.docx">Word</a>'
             f'<a class="dl" href="/print/{c}?auto=1" target="_blank" rel="noopener">PDF</a>'
             f"</li>"
             for c in downloadable

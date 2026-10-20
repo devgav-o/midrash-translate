@@ -4,73 +4,169 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{{name}} — live</title>
+<link rel="icon" href="/logo.png">
 <style>
+  /* Palette sampled from the yeshiva's logo: one blue, three stops.
+     #15155C deep indigo -> #0B4D9A royal -> #0177C8 cerulean. */
   :root {
-    --bg: #0f1115;
-    --fg: #f2f4f8;
-    --dim: #7c8798;
-    --accent: #6ea8fe;
+    --paper:  #FBFAF8;
+    --ink:    #15155C;
+    --near:   #4B5083;
+    --recede: #8489A6;
+    --quiet:  #6E7391;
+    --blue:   #0B4D9A;
+    --sky:    #0177C8;
+    --rule:   #DEDEE8;
+    --warn:   #A8341F;
+
+    /* Palatino Linotype ships on Windows *with* Zapf's Hebrew, which is why it
+       leads: the classroom machine is offline, so a webfont is not an option and
+       one family has to carry both scripts. The Hebrew serifs after it cover the
+       machines where it is absent. */
+    --serif: "Palatino Linotype", "Book Antiqua", Palatino, "Frank Ruehl CLM",
+             FrankRuehl, David, "New Peninim MT", "Noto Serif Hebrew",
+             "Arial Hebrew", Georgia, serif;
+    --sans: "Segoe UI", -apple-system, system-ui, "Helvetica Neue",
+            "Noto Sans Hebrew", "Arial Hebrew", Arial, sans-serif;
+
     --font-size: {{font_size}}px;
   }
+  html[data-theme="night"] {
+    --paper:  #0B1030;
+    --ink:    #EDEFF8;
+    --near:   #AEB4D8;
+    --recede: #767CA6;
+    --quiet:  #949AC0;
+    --blue:   #7FB2EC;
+    --sky:    #5AA8E8;
+    --rule:   #212856;
+    --warn:   #E8A08C;
+  }
+
   * { box-sizing: border-box; }
-  html, body { height: 100%; margin: 0; background: var(--bg); color: var(--fg); }
+  html, body { height: 100%; margin: 0; }
   body {
-    font-family: "Segoe UI", "Noto Sans Hebrew", "Arial Hebrew", system-ui, -apple-system, sans-serif;
+    background: var(--paper); color: var(--ink); font-family: var(--serif);
     display: flex; flex-direction: column; overflow: hidden;
   }
+
+  /* ---- the hairline. Identity stays; diagnostics come and go. ------------ */
+
   header {
-    display: flex; align-items: center; gap: .6rem;
-    padding: .5rem 1.2rem; font-size: 15px; color: var(--dim);
-    border-bottom: 1px solid #1e2330; flex: 0 0 auto; direction: ltr;
+    flex: 0 0 auto; direction: ltr; display: flex; align-items: center;
+    gap: 1rem; padding: .55rem 1.6rem .5rem;
+    border-bottom: 1px solid var(--rule);
+    font: 13px/1 var(--sans); color: var(--quiet);
   }
-  header .title { color: var(--fg); font-weight: 600; letter-spacing: .02em; }
+  header .mark { height: 30px; width: auto; display: block; }
+  html[data-theme="night"] header .mark { filter: brightness(0) invert(1); opacity: .82; }
   header .spacer { flex: 1; }
-  header .age { font-variant-numeric: tabular-nums; opacity: .75; }
-  #dot { width: 10px; height: 10px; border-radius: 50%; background: #d4574d; }
-  #dot.on { background: #4fb477; }
+  header .tongue {
+    font-family: var(--serif); font-size: 17px; color: var(--blue);
+    letter-spacing: .01em;
+  }
+  /* only while someone is at the machine, or with ?debug=1 */
+  header .meta, header .keys {
+    opacity: 0; transition: opacity .45s ease; font-variant-numeric: tabular-nums;
+  }
+  body.awake header .meta, body.awake header .keys,
+  body.debug header .meta, body.debug header .keys { opacity: 1; }
+  header .keys { color: var(--recede); }
+  header kbd {
+    font: inherit; font-weight: 600; color: var(--quiet);
+    border: 1px solid var(--rule); border-radius: 3px; padding: .1em .35em;
+  }
+
+  /* ---- the reading surface ---------------------------------------------- */
+
   #lines {
-    flex: 1 1 auto; overflow-y: auto; padding: 1.2rem 2.5rem 45vh;
+    flex: 1 1 auto; overflow-y: auto; padding: 6vh 2rem 46vh;
     /* deliberately NOT scroll-behavior:smooth -- animated scrolling is driven by
        the frame loop, which browsers throttle in unfocused windows, leaving a
        projector stranded above the newest line */
   }
+  #col {
+    font-size: var(--font-size);
+    max-width: 28em;          /* ~60 characters, whatever the projector is */
+    margin-inline: auto;
+  }
+
   .line {
-    font-size: var(--font-size); line-height: 1.45;
-    margin: 0 0 .55em; white-space: pre-wrap; word-wrap: break-word;
+    position: relative;
+    padding-inline-start: 3.4em;   /* the speaker margin */
+    margin: 0 0 .62em;
+    line-height: 1.5;
+    white-space: pre-wrap; word-wrap: break-word;
+    /* Three steps of attention, tone only -- never size, because a line that
+       changes size when the next one lands makes the whole page jump. */
+    color: var(--recede);             /* said a while ago */
   }
+  .line.near { color: var(--near); }  /* the line you glance back to */
+  .line.now  { color: var(--ink); }   /* being said now */
+
+  /* The speaker hangs in the margin the way a source note does in a printed
+     sefer, so every line of the transcript starts on the same vertical edge. */
   .line .who {
-    display: inline-block; font-size: .52em; font-weight: 700;
-    letter-spacing: .06em; color: var(--accent); background: #1b2434;
-    padding: .12em .5em; border-radius: .3em; margin-inline-end: .5em;
-    vertical-align: .18em; white-space: nowrap;
+    position: absolute; inset-inline-start: 0; top: .42em;
+    width: 2.9em; text-align: end;
+    font: 600 .38em/1.2 var(--sans); letter-spacing: .04em;
+    color: var(--blue); white-space: nowrap;
   }
-  .line.pending { color: var(--dim); }
-  .line.pending::after {
-    content: "…"; opacity: .6; animation: blink 1.1s ease-in-out infinite;
-  }
+  .line.now .who { color: var(--sky); }
+
   .line .src {
-    display: block; font-size: .42em; color: var(--dim);
-    margin-top: .15em; direction: ltr; text-align: start;
+    display: block; font-size: .4em; line-height: 1.5; color: var(--recede);
+    margin-top: .35em; direction: ltr; text-align: start;
+    font-family: var(--sans);
   }
-  @keyframes blink { 0%, 100% { opacity: .25 } 50% { opacity: .9 } }
+
+  /* Where the next line will land. The one moving thing on the page -- a slow
+     breath, not a blink, because this is in front of people for ninety minutes. */
+  .line.pending::after {
+    content: ""; display: inline-block; vertical-align: -.08em;
+    width: .09em; height: .78em; margin-inline-start: .06em;
+    background: var(--sky); animation: breathe 2.6s ease-in-out infinite;
+  }
+  @keyframes breathe { 0%, 100% { opacity: .25 } 50% { opacity: .95 } }
+  @media (prefers-reduced-motion: reduce) {
+    .line.pending::after { animation: none; opacity: .7; }
+  }
+
+  /* ---- speak only when something is wrong -------------------------------- */
+
+  #alert[hidden] { display: none; }
+  #alert {
+    position: fixed; top: 3.4rem; left: 50%; transform: translateX(-50%);
+    background: var(--warn); color: var(--paper);
+    font: 600 15px/1 var(--sans); padding: .6rem 1.1rem; border-radius: 2px;
+  }
+
   #jump {
-    position: fixed; bottom: 1.5rem; inset-inline-end: 1.5rem; display: none;
-    padding: .6rem 1rem; border: 0; border-radius: 999px; cursor: pointer;
-    background: var(--accent); color: #0f1115; font: 600 15px/1 system-ui;
+    position: fixed; bottom: 2rem; inset-inline-end: 2rem; display: none;
+    padding: .7rem 1.2rem; border: 1px solid var(--blue); border-radius: 2px;
+    cursor: pointer; background: var(--blue); color: var(--paper);
+    font: 600 16px/1 var(--sans);
   }
   #jump.show { display: block; }
+  #jump:focus-visible { outline: 3px solid var(--sky); outline-offset: 3px; }
 </style>
 </head>
 <body>
 <header>
-  <span id="dot"></span>
-  <span class="title">{{name}}</span>
+  <img class="mark" src="/logo.png" alt="Midrash Shmuel">
+  <span class="tongue">{{name}}</span>
   <span class="spacer"></span>
-  <span class="age" id="age"></span>
-  <span id="hint">+ / −  font · S source · F fullscreen</span>
+  <span class="meta" id="meta"></span>
+  <span class="keys">
+    <kbd>+</kbd> <kbd>−</kbd> size &nbsp; <kbd>S</kbd> source &nbsp;
+    <kbd>D</kbd> night &nbsp; <kbd>F</kbd> fullscreen
+  </span>
 </header>
-<main id="lines" dir="{{dir}}"></main>
-<button id="jump">↓ live</button>
+
+<main id="lines" dir="{{dir}}"><div id="col"></div></main>
+
+<div id="alert" hidden>Reconnecting to the server…</div>
+<button id="jump">↓ Live</button>
 
 <script>
 const LANG = "{{lang}}";
@@ -78,12 +174,28 @@ const MAX_LINES = {{max_lines}};
 let showSource = {{show_source}};
 
 const linesEl = document.getElementById("lines");
-const dot = document.getElementById("dot");
+const colEl = document.getElementById("col");
+const alertEl = document.getElementById("alert");
 const jump = document.getElementById("jump");
 
 let order = [];            // paragraph ids, in document order
 const lines = new Map();   // id -> {text, src, pending}
 let following = true;      // auto-scroll unless the viewer scrolled up
+
+// Font size and night mode survive a reload, per language: whoever set the
+// Hebrew screen two sizes bigger last week should not have to do it again.
+const store = {
+  get(k, fallback) {
+    try { const v = localStorage.getItem("mt." + k); return v === null ? fallback : v; }
+    catch (e) { return fallback; }
+  },
+  set(k, v) { try { localStorage.setItem("mt." + k, v); } catch (e) {} },
+};
+
+const root = document.documentElement;
+root.dataset.theme = store.get("theme", "day");
+const savedSize = store.get("size." + LANG, null);
+if (savedSize) root.style.setProperty("--font-size", savedSize + "px");
 
 function scrollToBottom() {
   // direct assignment, never scrollTo({behavior:'smooth'}), so it lands even
@@ -93,8 +205,8 @@ function scrollToBottom() {
 
 function render() {
   const frag = document.createDocumentFragment();
-  const visible = order.slice(-MAX_LINES);
-  for (const id of visible) {
+  const written = [];   // rendered lines that actually have words on them
+  for (const id of order.slice(-MAX_LINES)) {
     const d = lines.get(id);
     if (!d) continue;
     if (!d.src || !d.src.trim()) continue;
@@ -106,7 +218,7 @@ function render() {
       who.textContent = d.speaker;
       p.appendChild(who);
     }
-    // appendChild, not textContent, so the speaker chip survives
+    // appendChild, not textContent, so the speaker marginal survives
     p.appendChild(document.createTextNode(d.text || ""));
     if (showSource && d.src) {
       const s = document.createElement("span");
@@ -115,8 +227,14 @@ function render() {
       p.appendChild(s);
     }
     frag.appendChild(p);
+    if (d.text) written.push(p);
   }
-  linesEl.replaceChildren(frag);
+  // Full ink goes to the last line that has words on it -- not to the empty
+  // paragraph waiting on its translation, or the whole screen would sit grey
+  // for the second between the lecturer speaking and the text arriving.
+  if (written.length) written[written.length - 1].classList.add("now");
+  if (written.length > 1) written[written.length - 2].classList.add("near");
+  colEl.replaceChildren(frag);
   if (following) scrollToBottom();
 }
 
@@ -126,6 +244,7 @@ function applyLines(items) {
 
 let sock = null;
 let keepalive = null;
+let alertTimer = null;
 
 function connect() {
   if (sock && (sock.readyState === 0 || sock.readyState === 1)) return;
@@ -134,14 +253,17 @@ function connect() {
   sock = ws;
 
   ws.onopen = () => {
-    dot.classList.add("on");
+    clearTimeout(alertTimer);
+    alertEl.hidden = true;
     clearInterval(keepalive);
     // keeps intermediaries from dropping an idle socket between paragraphs
     keepalive = setInterval(() => { if (ws.readyState === 1) ws.send("ping"); }, 20000);
   };
   ws.onclose = () => {
-    dot.classList.remove("on");
     clearInterval(keepalive);
+    // a reconnect that takes half a second is not worth telling the room about
+    clearTimeout(alertTimer);
+    alertTimer = setTimeout(() => { alertEl.hidden = false; }, 2500);
     setTimeout(connect, 1000);
   };
   ws.onerror = () => ws.close();
@@ -176,20 +298,41 @@ jump.addEventListener("click", () => {
   jump.classList.remove("show");
 });
 
-const root = document.documentElement;
 function bumpFont(delta) {
   const cur = parseFloat(getComputedStyle(root).getPropertyValue("--font-size"));
-  root.style.setProperty("--font-size", Math.max(16, Math.min(160, cur + delta)) + "px");
+  const next = Math.max(16, Math.min(160, cur + delta));
+  root.style.setProperty("--font-size", next + "px");
+  store.set("size." + LANG, next);
   if (following) linesEl.scrollTop = linesEl.scrollHeight;
 }
 document.addEventListener("keydown", (e) => {
+  wake();
   if (e.key === "+" || e.key === "=") bumpFont(4);
   else if (e.key === "-" || e.key === "_") bumpFont(-4);
   else if (e.key.toLowerCase() === "s") { showSource = !showSource; render(); }
+  else if (e.key.toLowerCase() === "d") {
+    root.dataset.theme = root.dataset.theme === "night" ? "day" : "night";
+    store.set("theme", root.dataset.theme);
+  }
   else if (e.key.toLowerCase() === "f") {
     document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen();
   }
 });
+
+// The key hints and the message counter are for whoever is standing at the
+// machine. Once they walk away they are just something for the room to read, so
+// they go. ?debug=1 pins them on.
+let sleepTimer = null;
+function wake() {
+  document.body.classList.add("awake");
+  clearTimeout(sleepTimer);
+  sleepTimer = setTimeout(() => document.body.classList.remove("awake"), 4000);
+}
+document.addEventListener("mousemove", wake);
+if (new URLSearchParams(location.search).get("debug") === "1") {
+  document.body.classList.add("debug");
+}
+wake();
 
 // A window that is visible but NOT focused -- the split-screen case, and every
 // projector on a second monitor -- never fires visibilitychange. So recover on
@@ -209,12 +352,12 @@ window.addEventListener("pageshow", resync);
 // Shows how long since the last message actually arrived. If this keeps ticking
 // up while the transcriber is typing, the page is not receiving; if it stays
 // near zero but the text looks stale, the browser is not repainting.
-const ageEl = document.getElementById("age");
+const metaEl = document.getElementById("meta");
 let lastMessageAt = Date.now();
 let messageCount = 0;
 setInterval(() => {
   const secs = Math.round((Date.now() - lastMessageAt) / 1000);
-  ageEl.textContent = `${messageCount} msg · ${secs}s ago`;
+  metaEl.textContent = `${messageCount} updates, last ${secs}s ago`;
 }, 1000);
 
 // stop the projector machine blanking the screen mid-lecture
